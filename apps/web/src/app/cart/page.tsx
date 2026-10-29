@@ -54,14 +54,13 @@ export default function CartPage() {
         <aside className="h-fit rounded-2xl border border-line bg-card p-6">
           <h2 className="font-medium">Order summary</h2>
           <p className="mt-4 flex justify-between"><span>Subtotal</span><span>{formatMoney(subtotal, currency)}</span></p>
-          <p className="mt-1 text-sm text-muted">Shipping and tax calculated at checkout.</p>
-          <button
-            type="button"
-            disabled
-            className="mt-6 h-11 w-full cursor-not-allowed rounded-full bg-ink/40 font-medium text-white"
+          <p className="mt-1 text-sm text-muted">Delivery calculated at checkout.</p>
+          <Link
+            href="/checkout"
+            className="mt-6 flex h-11 w-full items-center justify-center rounded-full bg-ink font-medium text-white transition hover:bg-brand hover:text-ink"
           >
-            Checkout (coming soon)
-          </button>
+            Checkout
+          </Link>
         </aside>
       </div>
     </div>

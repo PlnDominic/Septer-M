@@ -1,7 +1,6 @@
-import type { Currency } from '@septer-m/shared';
+export { FREE_SHIPPING_OVER } from '@septer-m/shared';
 
 /** Placeholder policy values - confirm with the business before launch. */
-export const FREE_SHIPPING_OVER: Record<Currency, number> = { GBP: 4000, GHS: 50000 };
 export const RETURN_DAYS = 30;
 
 export const NAV = [

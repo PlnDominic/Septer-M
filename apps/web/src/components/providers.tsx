@@ -9,6 +9,8 @@ interface CartLine {
 }
 
 interface ShopState {
+  /** False until cart/region have been restored from storage. */
+  ready: boolean;
   region: Region;
   currency: Currency;
   setRegion: (r: Region) => void;
@@ -85,6 +87,7 @@ export function Providers({ children }: { children: ReactNode }) {
 
   const value = useMemo<ShopState>(
     () => ({
+      ready,
       region,
       currency: REGION_CURRENCY[region],
       setRegion,
@@ -96,7 +99,7 @@ export function Providers({ children }: { children: ReactNode }) {
       wishlist,
       toggleWish,
     }),
-    [region, setRegion, lines, add, setQty, clear, wishlist, toggleWish],
+    [ready, region, setRegion, lines, add, setQty, clear, wishlist, toggleWish],
   );
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>;

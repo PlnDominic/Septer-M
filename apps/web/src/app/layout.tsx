@@ -16,11 +16,12 @@ export const metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={poppins.variable}>
-      <body>
+      {/* Flex column so the footer sits at the bottom of the window on short pages. */}
+      <body className="flex min-h-screen flex-col">
         <Providers>
           <AnnouncementBar />
           <Header />
-          <main className="mx-auto max-w-6xl px-4">{children}</main>
+          <main className="mx-auto w-full max-w-6xl flex-1 px-4">{children}</main>
           <Footer />
         </Providers>
       </body>
