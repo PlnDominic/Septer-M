@@ -1,10 +1,10 @@
 import type { Product } from '@/lib/products';
 
 /** Placeholder bottle graphic until real product photography is available. */
-export function ProductVisual({ product, className = '' }: { product: Product; className?: string }) {
+export function ProductVisual({ product, className = '', square = false }: { product: Product; className?: string; square?: boolean }) {
   return (
     <div
-      className={`relative flex aspect-[4/5] items-center justify-center overflow-hidden rounded-2xl ${className}`}
+      className={`relative flex ${square ? 'aspect-square' : 'aspect-[4/5]'} items-center justify-center overflow-hidden rounded-2xl ${className}`}
       style={{ background: `linear-gradient(160deg, ${product.tint[0]}, ${product.tint[1]})` }}
       role="img"
       aria-label={`${product.name} (illustration)`}

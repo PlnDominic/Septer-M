@@ -16,6 +16,12 @@ export interface Product {
   howToUse: string;
   /** Placeholder visual until real photography exists. */
   tint: [string, string];
+  isNew: boolean;
+  bestSeller: boolean;
+  /** Percent off, if on sale. Compare-at price is derived from it. */
+  salePercent?: number;
+  /** Placeholder values until real reviews exist. */
+  rating: { value: number; count: number };
 }
 
 export const CATEGORIES: { id: Category; label: string }[] = [
@@ -27,7 +33,7 @@ export const CATEGORIES: { id: Category; label: string }[] = [
 ];
 
 // Placeholder catalogue - replaced by Supabase data in the catalogue phase.
-export const PRODUCTS: Product[] = [
+const BASE: Omit<Product, 'isNew' | 'bestSeller' | 'salePercent' | 'rating'>[] = [
   {
     slug: 'gentle-gel-cleanser',
     name: 'Gentle Gel Cleanser',
@@ -133,5 +139,22 @@ export const PRODUCTS: Product[] = [
     tint: ['#e9e0d3', '#d4c5ae'],
   },
 ];
+
+const META: Record<string, Pick<Product, 'isNew' | 'bestSeller' | 'salePercent' | 'rating'>> = {
+  'gentle-gel-cleanser': { isNew: false, bestSeller: true, rating: { value: 4.8, count: 128 } },
+  'vitamin-c-brightening-serum': { isNew: true, bestSeller: true, rating: { value: 4.7, count: 94 } },
+  'niacinamide-clarifying-serum': { isNew: false, bestSeller: true, rating: { value: 4.6, count: 156 } },
+  'barrier-repair-moisturiser': { isNew: true, bestSeller: false, rating: { value: 4.9, count: 71 } },
+  'light-gel-moisturiser': { isNew: false, bestSeller: false, salePercent: 10, rating: { value: 4.5, count: 87 } },
+  'daily-sunscreen-spf-50': { isNew: true, bestSeller: true, rating: { value: 4.8, count: 203 } },
+  'overnight-hydration-mask': { isNew: true, bestSeller: false, rating: { value: 4.7, count: 58 } },
+  'clay-purifying-mask': { isNew: false, bestSeller: false, salePercent: 15, rating: { value: 4.4, count: 66 } },
+};
+
+export const PRODUCTS: Product[] = BASE.map((p) => ({ ...p, ...META[p.slug] }));
+
+/** Original price before any sale, in minor units. */
+export const compareAtPrice = (p: Product, currency: Currency): number | null =>
+  p.salePercent ? Math.round(p.price[currency] / (1 - p.salePercent / 100)) : null;
 
 export const getProduct = (slug: string) => PRODUCTS.find((p) => p.slug === slug);

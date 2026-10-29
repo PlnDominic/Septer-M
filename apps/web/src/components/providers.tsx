@@ -17,6 +17,8 @@ interface ShopState {
   add: (slug: string, qty?: number) => void;
   setQty: (slug: string, qty: number) => void;
   clear: () => void;
+  wishlist: string[];
+  toggleWish: (slug: string) => void;
 }
 
 const ShopContext = createContext<ShopState | null>(null);
@@ -40,17 +42,27 @@ const write = (key: string, value: unknown) => {
 export function Providers({ children }: { children: ReactNode }) {
   const [region, setRegionState] = useState<Region>('UK');
   const [lines, setLines] = useState<CartLine[]>([]);
+  const [wishlist, setWishlist] = useState<string[]>([]);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     setRegionState(read<Region>('sm.region', 'UK'));
     setLines(read<CartLine[]>('sm.cart', []));
+    setWishlist(read<string[]>('sm.wishlist', []));
     setReady(true);
   }, []);
 
   useEffect(() => {
     if (ready) write('sm.cart', lines);
   }, [lines, ready]);
+
+  useEffect(() => {
+    if (ready) write('sm.wishlist', wishlist);
+  }, [wishlist, ready]);
+
+  const toggleWish = useCallback((slug: string) => {
+    setWishlist((cur) => (cur.includes(slug) ? cur.filter((s) => s !== slug) : [...cur, slug]));
+  }, []);
 
   const setRegion = useCallback((r: Region) => {
     setRegionState(r);
@@ -81,8 +93,10 @@ export function Providers({ children }: { children: ReactNode }) {
       add,
       setQty,
       clear,
+      wishlist,
+      toggleWish,
     }),
-    [region, setRegion, lines, add, setQty, clear],
+    [region, setRegion, lines, add, setQty, clear, wishlist, toggleWish],
   );
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>;

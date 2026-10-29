@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import './globals.css';
 import { Providers } from '@/components/providers';
+import { AnnouncementBar } from '@/components/announcement-bar';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 
@@ -14,6 +15,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en">
       <body>
         <Providers>
+          <AnnouncementBar />
           <Header />
           <main className="mx-auto max-w-6xl px-4">{children}</main>
           <Footer />
