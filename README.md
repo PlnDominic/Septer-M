@@ -4,7 +4,7 @@ Skincare e-commerce for the UK (GBP) and Ghana (GHS).
 
 | Layer | Choice |
 |---|---|
-| API | NestJS 11 (`apps/api`), deployed to Vercel as a serverless function |
+| API | NestJS 11 (`apps/api`), to be served from the same Vercel project |
 | Storefront + admin | Next.js (`apps/web`) |
 | Backend services | Supabase (Postgres, Auth, Storage) |
 | Payments (planned) | Stripe (UK), Paystack (Ghana, incl. mobile money) |
@@ -30,15 +30,12 @@ pnpm dev:web   # http://localhost:3000
 
 ## Deploying to Vercel
 
-Create two Vercel projects from this repo:
+One Vercel project, rooted at `apps/web` (Framework: Next.js).
+Enable "Include source files outside of the Root Directory" because the app depends on `packages/shared`.
+Set the env vars from `.env.example`.
 
-| Project | Root Directory |
-|---|---|
-| septer-m-api | `apps/api` |
-| septer-m-web | `apps/web` |
-
-Enable "Include source files outside of the Root Directory" for both (the apps depend on `packages/shared`).
-Set the env vars from `.env.example`. Use the Supabase **pooled** connection string for `DATABASE_URL`.
+The NestJS API (`apps/api`) is not deployed yet. When the backend phase starts it will be served from this same project.
+Use the Supabase **pooled** connection string for `DATABASE_URL`.
 
 ## Conventions
 
