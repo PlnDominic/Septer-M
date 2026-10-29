@@ -2,9 +2,6 @@ import type { ReactNode } from 'react';
 import { Poppins } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/components/providers';
-import { AnnouncementBar } from '@/components/announcement-bar';
-import { Header } from '@/components/header';
-import { Footer } from '@/components/footer';
 
 const poppins = Poppins({ subsets: ['latin'], weight: ['600', '700'], variable: '--font-poppins', display: 'swap' });
 
@@ -18,12 +15,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" className={poppins.variable}>
       {/* Flex column so the footer sits at the bottom of the window on short pages. */}
       <body className="flex min-h-screen flex-col">
-        <Providers>
-          <AnnouncementBar />
-          <Header />
-          <main className="mx-auto w-full max-w-6xl flex-1 px-4">{children}</main>
-          <Footer />
-        </Providers>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

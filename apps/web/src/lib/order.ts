@@ -25,11 +25,16 @@ export interface Order {
 
 const KEY = 'sm.lastOrder';
 
-export const newOrderNumber = () => `SM-${Date.now().toString(36).toUpperCase()}`;
+export const newOrderNumber = () => `SM-${Math.floor(Date.now() / 1000).toString(36).toUpperCase()}`;
+
+/** Orders placed in this browser, picked up by the admin demo until the API exists. */
+export const PLACED_KEY = 'sm.placedOrders';
 
 export function saveLastOrder(order: Order) {
   try {
     sessionStorage.setItem(KEY, JSON.stringify(order));
+    const placed = JSON.parse(localStorage.getItem(PLACED_KEY) ?? '[]') as Order[];
+    localStorage.setItem(PLACED_KEY, JSON.stringify([order, ...placed].slice(0, 50)));
   } catch {
     /* storage unavailable */
   }
