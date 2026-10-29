@@ -14,26 +14,26 @@ export interface Product {
   concerns: string[];
   ingredients: string;
   howToUse: string;
-  /** Placeholder visual until real photography exists. */
-  tint: [string, string];
+  /** Path under /public. Stock photography until real product shots exist. */
+  image: string;
   isNew: boolean;
   bestSeller: boolean;
-  /** Percent off, if on sale. Compare-at price is derived from it. */
-  salePercent?: number;
+  /** Original price per currency, if on sale (minor units). */
+  compareAt?: Record<Currency, number>;
   /** Placeholder values until real reviews exist. */
   rating: { value: number; count: number };
 }
 
-export const CATEGORIES: { id: Category; label: string }[] = [
-  { id: 'cleanser', label: 'Cleansers' },
-  { id: 'serum', label: 'Serums' },
-  { id: 'moisturiser', label: 'Moisturisers' },
-  { id: 'sunscreen', label: 'Sunscreen' },
-  { id: 'mask', label: 'Masks' },
+export const CATEGORIES: { id: Category; label: string; image: string }[] = [
+  { id: 'cleanser', label: 'Cleansers', image: '/images/lifestyle/cat-cleanser.jpg' },
+  { id: 'serum', label: 'Serums', image: '/images/lifestyle/cat-serum.jpg' },
+  { id: 'moisturiser', label: 'Moisturisers', image: '/images/lifestyle/cat-moisturiser.jpg' },
+  { id: 'sunscreen', label: 'Sunscreen', image: '/images/lifestyle/cat-sunscreen.jpg' },
+  { id: 'mask', label: 'Masks', image: '/images/lifestyle/cat-mask.jpg' },
 ];
 
 // Placeholder catalogue - replaced by Supabase data in the catalogue phase.
-const BASE: Omit<Product, 'isNew' | 'bestSeller' | 'salePercent' | 'rating'>[] = [
+const BASE: Omit<Product, 'isNew' | 'bestSeller' | 'compareAt' | 'rating' | 'image'>[] = [
   {
     slug: 'gentle-gel-cleanser',
     name: 'Gentle Gel Cleanser',
@@ -45,7 +45,6 @@ const BASE: Omit<Product, 'isNew' | 'bestSeller' | 'salePercent' | 'rating'>[] =
     concerns: ['Everyday cleansing'],
     ingredients: 'Aqua, Glycerin, Coco-Glucoside, Aloe Barbadensis Leaf Juice, Panthenol, Allantoin',
     howToUse: 'Massage onto damp skin morning and evening, then rinse with lukewarm water.',
-    tint: ['#dfe9dc', '#c4d6c1'],
   },
   {
     slug: 'vitamin-c-brightening-serum',
@@ -58,7 +57,6 @@ const BASE: Omit<Product, 'isNew' | 'bestSeller' | 'salePercent' | 'rating'>[] =
     concerns: ['Dark spots', 'Dullness'],
     ingredients: 'Aqua, Ascorbyl Glucoside, Glycerin, Niacinamide, Sodium Hyaluronate, Ferulic Acid',
     howToUse: 'Apply 3-4 drops to clean skin in the morning, followed by moisturiser and SPF.',
-    tint: ['#f6e3c3', '#efc98a'],
   },
   {
     slug: 'niacinamide-clarifying-serum',
@@ -71,7 +69,6 @@ const BASE: Omit<Product, 'isNew' | 'bestSeller' | 'salePercent' | 'rating'>[] =
     concerns: ['Blemishes', 'Excess oil', 'Pores'],
     ingredients: 'Aqua, Niacinamide, Zinc PCA, Propanediol, Panthenol, Allantoin',
     howToUse: 'Apply a few drops to clean skin morning or evening before moisturiser.',
-    tint: ['#e6e1f0', '#cfc6e3'],
   },
   {
     slug: 'barrier-repair-moisturiser',
@@ -84,7 +81,6 @@ const BASE: Omit<Product, 'isNew' | 'bestSeller' | 'salePercent' | 'rating'>[] =
     concerns: ['Dryness', 'Redness'],
     ingredients: 'Aqua, Butyrospermum Parkii (Shea) Butter, Ceramide NP, Squalane, Glycerin, Panthenol',
     howToUse: 'Smooth over face and neck morning and night as the final step of your routine.',
-    tint: ['#f1e4d8', '#e3cbb5'],
   },
   {
     slug: 'light-gel-moisturiser',
@@ -97,7 +93,6 @@ const BASE: Omit<Product, 'isNew' | 'bestSeller' | 'salePercent' | 'rating'>[] =
     concerns: ['Dehydration'],
     ingredients: 'Aqua, Sodium Hyaluronate, Glycerin, Aloe Barbadensis Leaf Juice, Squalane, Allantoin',
     howToUse: 'Apply to clean skin morning and evening.',
-    tint: ['#d9ebee', '#b9d9de'],
   },
   {
     slug: 'daily-sunscreen-spf-50',
@@ -110,7 +105,6 @@ const BASE: Omit<Product, 'isNew' | 'bestSeller' | 'salePercent' | 'rating'>[] =
     concerns: ['Sun protection', 'Dark spots'],
     ingredients: 'Aqua, Zinc Oxide, Caprylic/Capric Triglyceride, Glycerin, Tocopherol, Squalane',
     howToUse: 'Apply generously as the last step every morning and reapply every two hours in strong sun.',
-    tint: ['#fbeec6', '#f5dc8e'],
   },
   {
     slug: 'overnight-hydration-mask',
@@ -123,7 +117,6 @@ const BASE: Omit<Product, 'isNew' | 'bestSeller' | 'salePercent' | 'rating'>[] =
     concerns: ['Dryness', 'Dullness'],
     ingredients: 'Aqua, Glycerin, Sodium Hyaluronate, Shea Butter, Squalane, Panthenol',
     howToUse: 'Apply a thin layer as the last step 2-3 nights a week. Rinse in the morning.',
-    tint: ['#e4ecf6', '#c6d6ec'],
   },
   {
     slug: 'clay-purifying-mask',
@@ -136,25 +129,29 @@ const BASE: Omit<Product, 'isNew' | 'bestSeller' | 'salePercent' | 'rating'>[] =
     concerns: ['Blemishes', 'Pores'],
     ingredients: 'Aqua, Kaolin, Bentonite, Glycerin, Salicylic Acid, Allantoin',
     howToUse: 'Apply an even layer, leave 8-10 minutes, then rinse. Use once or twice weekly.',
-    tint: ['#e9e0d3', '#d4c5ae'],
   },
 ];
 
-const META: Record<string, Pick<Product, 'isNew' | 'bestSeller' | 'salePercent' | 'rating'>> = {
+const META: Record<string, Pick<Product, 'isNew' | 'bestSeller' | 'compareAt' | 'rating'>> = {
   'gentle-gel-cleanser': { isNew: false, bestSeller: true, rating: { value: 4.8, count: 128 } },
   'vitamin-c-brightening-serum': { isNew: true, bestSeller: true, rating: { value: 4.7, count: 94 } },
   'niacinamide-clarifying-serum': { isNew: false, bestSeller: true, rating: { value: 4.6, count: 156 } },
   'barrier-repair-moisturiser': { isNew: true, bestSeller: false, rating: { value: 4.9, count: 71 } },
-  'light-gel-moisturiser': { isNew: false, bestSeller: false, salePercent: 10, rating: { value: 4.5, count: 87 } },
+  'light-gel-moisturiser': { isNew: false, bestSeller: false, compareAt: { GBP: 2100, GHS: 27000 }, rating: { value: 4.5, count: 87 } },
   'daily-sunscreen-spf-50': { isNew: true, bestSeller: true, rating: { value: 4.8, count: 203 } },
   'overnight-hydration-mask': { isNew: true, bestSeller: false, rating: { value: 4.7, count: 58 } },
-  'clay-purifying-mask': { isNew: false, bestSeller: false, salePercent: 15, rating: { value: 4.4, count: 66 } },
+  'clay-purifying-mask': { isNew: false, bestSeller: false, compareAt: { GBP: 2000, GHS: 26000 }, rating: { value: 4.4, count: 66 } },
 };
 
-export const PRODUCTS: Product[] = BASE.map((p) => ({ ...p, ...META[p.slug] }));
+export const PRODUCTS: Product[] = BASE.map((p) => ({ ...p, ...META[p.slug], image: `/images/products/${p.slug}.jpg` }));
 
 /** Original price before any sale, in minor units. */
-export const compareAtPrice = (p: Product, currency: Currency): number | null =>
-  p.salePercent ? Math.round(p.price[currency] / (1 - p.salePercent / 100)) : null;
+export const compareAtPrice = (p: Product, currency: Currency): number | null => p.compareAt?.[currency] ?? null;
+
+/** Whole-number percent saved in the given currency, if on sale. */
+export const salePercent = (p: Product, currency: Currency): number | null => {
+  const was = compareAtPrice(p, currency);
+  return was ? Math.round((1 - p.price[currency] / was) * 100) : null;
+};
 
 export const getProduct = (slug: string) => PRODUCTS.find((p) => p.slug === slug);

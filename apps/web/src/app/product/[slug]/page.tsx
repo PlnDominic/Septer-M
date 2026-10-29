@@ -22,7 +22,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   return (
     <div className="py-12">
       <div className="grid gap-10 md:grid-cols-2">
-        <ProductVisual product={product} />
+        <ProductVisual product={product} sizes="(min-width: 768px) 50vw, 100vw" priority />
         <div>
           <p className="text-sm tracking-widest text-sage-dark uppercase">{product.category}</p>
           <h1 className="mt-1 font-serif text-4xl">{product.name}</h1>

@@ -32,7 +32,7 @@ export default function CartPage() {
         <ul className="divide-y divide-line border-y border-line">
           {rows.map(({ product, qty }) => (
             <li key={product.slug} className="flex gap-4 py-5">
-              <div className="w-20 shrink-0"><ProductVisual product={product} /></div>
+              <div className="w-20 shrink-0"><ProductVisual product={product} sizes="80px" /></div>
               <div className="flex flex-1 flex-col justify-between">
                 <div className="flex justify-between gap-4">
                   <Link href={`/product/${product.slug}`} className="font-medium hover:text-sage-dark">{product.name}</Link>

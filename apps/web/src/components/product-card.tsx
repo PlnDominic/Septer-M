@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import type { Product } from '@/lib/products';
+import { salePercent, type Product } from '@/lib/products';
 import { Price } from './price';
 import { ProductVisual } from './product-visual';
 import { Stars } from './stars';
@@ -10,7 +10,8 @@ import { HeartIcon, BagIcon } from './icons';
 import { useShop } from './providers';
 
 export function ProductCard({ product }: { product: Product }) {
-  const { wishlist, toggleWish, add } = useShop();
+  const { wishlist, toggleWish, add, currency } = useShop();
+  const off = salePercent(product, currency);
   const [added, setAdded] = useState(false);
   const wished = wishlist.includes(product.slug);
 
@@ -21,7 +22,7 @@ export function ProductCard({ product }: { product: Product }) {
       </Link>
       <div className="absolute top-3 left-3 flex flex-col gap-1">
         {product.isNew && <span className="rounded-md bg-ink px-2 py-0.5 text-[11px] font-medium text-white">New</span>}
-        {product.salePercent && <span className="rounded-md bg-clay px-2 py-0.5 text-[11px] font-medium text-white">−{product.salePercent}%</span>}
+        {off !== null && <span className="rounded-md bg-clay px-2 py-0.5 text-[11px] font-medium text-white">−{off}%</span>}
       </div>
       <button
         type="button"
