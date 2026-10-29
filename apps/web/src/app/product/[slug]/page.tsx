@@ -24,8 +24,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       <div className="grid gap-10 md:grid-cols-2">
         <ProductVisual product={product} sizes="(min-width: 768px) 50vw, 100vw" priority />
         <div>
-          <p className="text-sm tracking-widest text-sage-dark uppercase">{product.category}</p>
-          <h1 className="mt-1 font-serif text-4xl">{product.name}</h1>
+          <p className="flex items-center gap-2 text-sm tracking-widest uppercase"><span className="h-2 w-2 rounded-full bg-brand" aria-hidden />{product.category}</p>
+          <h1 className="mt-1 font-display text-4xl">{product.name}</h1>
           <p className="mt-2 text-muted">{product.tagline}</p>
           <p className="mt-5 text-2xl">
             <Price product={product} /> <span className="text-sm text-muted">· {product.sizeMl} ml</span>
@@ -55,7 +55,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
       {related.length > 0 && (
         <section className="mt-20">
-          <h2 className="mb-6 font-serif text-2xl">You may also like</h2>
+          <h2 className="mb-6 font-display text-2xl">You may also like</h2>
           <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
             {related.map((p) => <ProductCard key={p.slug} product={p} />)}
           </div>

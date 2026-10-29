@@ -18,7 +18,7 @@ const floating = [
 
 const SectionHead = ({ title, href }: { title: string; href: string }) => (
   <div className="mb-6 flex items-end justify-between">
-    <h2 className="font-serif text-2xl sm:text-3xl">{title}</h2>
+    <h2 className="font-display text-2xl sm:text-3xl">{title}</h2>
     <Link href={href} className="flex items-center gap-1 text-sm text-muted hover:text-ink">View all <ArrowIcon /></Link>
   </div>
 );
@@ -30,14 +30,14 @@ export default function Home() {
   return (
     <>
       {/* Hero */}
-      <section className="mt-6 grid items-stretch overflow-hidden rounded-3xl bg-gradient-to-br from-[#eef0e8] to-[#e4e8dc] md:grid-cols-2">
+      <section className="mt-6 grid items-stretch overflow-hidden rounded-3xl bg-mist md:grid-cols-2">
         <div className="self-center px-6 py-10 sm:px-12 md:py-16">
-          <p className="mb-3 text-xs font-medium tracking-widest text-clay uppercase">Skincare, made simple</p>
-          <h1 className="font-serif text-4xl leading-[1.1] sm:text-5xl lg:text-6xl">Honest formulas for skin that feels like yours.</h1>
+          <p className="mb-3 flex items-center gap-2 text-xs font-semibold tracking-widest uppercase"><span className="h-2 w-2 rounded-full bg-brand" aria-hidden />Skincare, made simple</p>
+          <h1 className="font-display text-4xl leading-[1.1] sm:text-5xl lg:text-6xl">Honest formulas for skin that feels like yours.</h1>
           <p className="mt-5 max-w-sm text-muted">A short list of well-made essentials, designed to work together and delivered to the UK and Ghana.</p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/shop" className="inline-flex items-center gap-2 rounded-lg bg-clay px-6 py-3 font-medium text-white hover:opacity-90">Shop now <ArrowIcon /></Link>
-            <Link href="/shop?collection=best" className="rounded-lg border border-line bg-card px-6 py-3 hover:border-sage">Best sellers</Link>
+            <Link href="/shop" className="inline-flex items-center gap-2 rounded-lg bg-ink px-6 py-3 font-medium text-white transition hover:bg-brand hover:text-ink">Shop now <ArrowIcon /></Link>
+            <Link href="/shop?collection=best" className="rounded-lg border border-line bg-card px-6 py-3 hover:border-brand">Best sellers</Link>
           </div>
         </div>
         <div className="relative h-[380px] w-full sm:h-[460px] md:h-full md:min-h-[480px]">
@@ -88,10 +88,10 @@ export default function Home() {
         <div className="grid gap-4 lg:grid-cols-3">
           {best.map((p) => (
             <article key={p.slug} className="relative flex gap-4 rounded-2xl border border-line bg-card p-4">
-              <span className="absolute top-3 left-3 z-[1] rounded-md bg-amber-400 px-2 py-0.5 text-[11px] font-medium">Bestseller</span>
+              <span className="absolute top-3 left-3 z-[1] rounded-md bg-brand px-2 py-0.5 text-[11px] font-medium">Bestseller</span>
               <Link href={`/product/${p.slug}`} className="w-32 shrink-0"><ProductVisual product={p} sizes="128px" /></Link>
               <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5">
-                <Link href={`/product/${p.slug}`} className="font-medium leading-snug hover:text-sage-dark">{p.name}</Link>
+                <Link href={`/product/${p.slug}`} className="font-medium leading-snug hover:text-brand-dark">{p.name}</Link>
                 <Price product={p} className="font-medium" />
                 <Stars value={p.rating.value} count={p.rating.count} />
                 <p className="text-xs text-muted">{p.tagline}</p>
@@ -104,18 +104,18 @@ export default function Home() {
 
       {/* Promo banners */}
       <section className="grid gap-4 pt-14 md:grid-cols-2">
-        <Link href="/shop" className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-clay to-[#e08a5a] p-8 pr-[44%] text-white sm:p-10 sm:pr-[44%]">
-          <p className="text-sm opacity-90">Build your routine</p>
-          <h3 className="mt-1 max-w-xs font-serif text-3xl leading-tight">Cleanse. Treat. Protect.</h3>
-          <p className="mt-3 max-w-xs text-sm opacity-90">Three simple steps, every product made to work together.</p>
-          <span className="mt-6 inline-flex items-center gap-2 rounded-lg bg-white px-5 py-2.5 text-sm font-medium text-ink">Shop the routine <ArrowIcon /></span>
+        <Link href="/shop" className="group relative overflow-hidden rounded-3xl bg-brand p-8 pr-[44%] text-ink sm:p-10 sm:pr-[44%]">
+          <p className="text-sm font-medium">Build your routine</p>
+          <h3 className="mt-1 max-w-xs font-display text-3xl leading-tight">Cleanse. Treat. Protect.</h3>
+          <p className="mt-3 max-w-xs text-sm">Three simple steps, every product made to work together.</p>
+          <span className="mt-6 inline-flex items-center gap-2 rounded-lg bg-ink px-5 py-2.5 text-sm font-medium text-white">Shop the routine <ArrowIcon /></span>
           <div className="absolute inset-y-0 right-0 w-2/5"><Image src="/images/lifestyle/routine.jpg" alt="" fill sizes="20vw" className="object-cover transition duration-500 group-hover:scale-105" /></div>
         </Link>
         <Link href="/shop?collection=new" className="group relative overflow-hidden rounded-3xl bg-ink p-8 pr-[44%] text-white sm:p-10 sm:pr-[44%]">
-          <p className="text-sm opacity-80">Just landed</p>
-          <h3 className="mt-1 max-w-xs font-serif text-3xl leading-tight">Overnight Hydration Mask</h3>
+          <p className="flex items-center gap-2 text-sm opacity-80"><span className="h-2 w-2 rounded-full bg-brand" aria-hidden />Just landed</p>
+          <h3 className="mt-1 max-w-xs font-display text-3xl leading-tight">Overnight Hydration Mask</h3>
           <p className="mt-3 max-w-xs text-sm opacity-80">Wake up to plump, rested skin.</p>
-          <span className="mt-6 inline-flex items-center gap-2 rounded-lg bg-white px-5 py-2.5 text-sm font-medium text-ink">See new arrivals <ArrowIcon /></span>
+          <span className="mt-6 inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-ink">See new arrivals <ArrowIcon /></span>
           <div className="absolute inset-y-0 right-0 w-2/5"><Image src="/images/lifestyle/night.jpg" alt="" fill sizes="20vw" className="object-cover transition duration-500 group-hover:scale-105" /></div>
         </Link>
       </section>

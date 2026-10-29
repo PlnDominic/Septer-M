@@ -14,7 +14,7 @@ export function QuickAdd({ slug }: { slug: string }) {
         setAdded(true);
         setTimeout(() => setAdded(false), 1500);
       }}
-      className="mt-1 w-fit rounded-lg bg-ink px-5 py-2 text-sm font-medium text-white transition hover:bg-sage-dark"
+      className="mt-1 w-fit rounded-lg bg-ink px-5 py-2 text-sm font-medium text-white transition hover:bg-brand hover:text-ink"
     >
       {added ? 'Added ✓' : 'Quick add'}
     </button>

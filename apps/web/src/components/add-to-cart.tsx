@@ -21,7 +21,7 @@ export function AddToCart({ slug }: { slug: string }) {
       </div>
       <button
         type="button"
-        className="h-11 flex-1 rounded-full bg-sage px-6 font-medium text-white transition hover:bg-sage-dark"
+        className="h-11 flex-1 rounded-full bg-ink px-6 font-medium text-white transition hover:bg-brand hover:text-ink"
         onClick={() => {
           add(slug, qty);
           setAdded(true);

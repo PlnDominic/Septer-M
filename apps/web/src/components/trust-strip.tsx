@@ -9,7 +9,7 @@ import { ChatIcon, LeafIcon, LockIcon, ReturnIcon, TruckIcon } from './icons';
 function Item({ icon, title, body }: { icon: ReactNode; title: string; body: string }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="text-sage-dark">{icon}</span>
+      <span className="text-brand">{icon}</span>
       <div>
         <p className="text-sm font-medium">{title}</p>
         <p className="text-xs text-muted">{body}</p>

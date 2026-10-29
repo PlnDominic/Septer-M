@@ -17,8 +17,8 @@ export default function CartPage() {
   if (rows.length === 0) {
     return (
       <div className="py-24 text-center">
-        <h1 className="font-serif text-3xl">Your bag is empty</h1>
-        <Link href="/shop" className="mt-6 inline-block rounded-full bg-sage px-7 py-3 font-medium text-white hover:bg-sage-dark">
+        <h1 className="font-display text-3xl">Your bag is empty</h1>
+        <Link href="/shop" className="mt-6 inline-block rounded-full bg-ink px-7 py-3 font-medium text-white hover:bg-brand hover:text-ink">
           Continue shopping
         </Link>
       </div>
@@ -27,7 +27,7 @@ export default function CartPage() {
 
   return (
     <div className="py-12">
-      <h1 className="font-serif text-4xl">Your bag</h1>
+      <h1 className="font-display text-4xl">Your bag</h1>
       <div className="mt-8 grid gap-10 md:grid-cols-[1fr_320px]">
         <ul className="divide-y divide-line border-y border-line">
           {rows.map(({ product, qty }) => (
@@ -35,7 +35,7 @@ export default function CartPage() {
               <div className="w-20 shrink-0"><ProductVisual product={product} sizes="80px" /></div>
               <div className="flex flex-1 flex-col justify-between">
                 <div className="flex justify-between gap-4">
-                  <Link href={`/product/${product.slug}`} className="font-medium hover:text-sage-dark">{product.name}</Link>
+                  <Link href={`/product/${product.slug}`} className="font-medium hover:text-brand-dark">{product.name}</Link>
                   <span>{formatMoney(product.price[currency] * qty, currency)}</span>
                 </div>
                 <div className="flex items-center gap-3 text-sm">
@@ -58,7 +58,7 @@ export default function CartPage() {
           <button
             type="button"
             disabled
-            className="mt-6 h-11 w-full cursor-not-allowed rounded-full bg-sage/50 font-medium text-white"
+            className="mt-6 h-11 w-full cursor-not-allowed rounded-full bg-ink/40 font-medium text-white"
           >
             Checkout (coming soon)
           </button>

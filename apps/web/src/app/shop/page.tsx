@@ -20,11 +20,11 @@ export default async function Shop({ searchParams }: { searchParams: Promise<Par
 
   const title = q ? `Results for “${q}”` : collection === 'new' ? 'New arrivals' : collection === 'best' ? 'Best sellers' : 'Shop';
   const tab = (active: boolean) =>
-    `rounded-full border px-4 py-1.5 text-sm ${active ? 'border-sage bg-sage text-white' : 'border-line bg-card hover:border-sage'}`;
+    `rounded-full border px-4 py-1.5 text-sm ${active ? 'border-ink bg-ink text-white' : 'border-line bg-card hover:border-brand'}`;
 
   return (
     <div className="py-12">
-      <h1 className="font-serif text-4xl">{title}</h1>
+      <h1 className="font-display text-4xl">{title}</h1>
       <div className="mt-6 flex flex-wrap gap-2">
         <Link href="/shop" className={tab(!category && !collection && !q)}>All</Link>
         {CATEGORIES.map((c) => (

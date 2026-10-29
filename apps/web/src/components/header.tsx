@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import type { Region } from '@septer-m/shared';
@@ -11,7 +12,7 @@ import { BagIcon, ChevronIcon, CloseIcon, HeartIcon, MenuIcon, SearchIcon, UserI
 
 const Badge = ({ n }: { n: number }) =>
   n > 0 ? (
-    <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-clay px-1 text-[10px] text-white">{n}</span>
+    <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-semibold text-ink">{n}</span>
   ) : null;
 
 export function Header() {
@@ -23,7 +24,7 @@ export function Header() {
   const [q, setQ] = useState('');
 
   const link = (href: string) =>
-    `py-1 text-sm transition hover:text-sage-dark ${href === pathname ? 'border-b-2 border-clay' : 'border-b-2 border-transparent'}`;
+    `py-1 text-sm transition hover:text-brand-dark ${href === pathname ? 'border-b-2 border-brand' : 'border-b-2 border-transparent'}`;
   const icon = 'relative flex h-10 w-10 items-center justify-center rounded-full hover:bg-black/5';
 
   const submit = (e: FormEvent) => {
@@ -40,13 +41,15 @@ export function Header() {
           <button type="button" className={`${icon} md:hidden`} aria-label={menu ? 'Close menu' : 'Open menu'} aria-expanded={menu} onClick={() => setMenu((m) => !m)}>
             {menu ? <CloseIcon /> : <MenuIcon />}
           </button>
-          <Link href="/" className="font-serif text-xl tracking-wide sm:text-2xl">Septer-M</Link>
+          <Link href="/" aria-label="Septer-M home" className="shrink-0">
+            <Image src="/brand/wordmark.png" alt="Septer-M" width={1144} height={236} priority className="h-6 w-auto sm:h-7" />
+          </Link>
         </div>
 
         <nav className="hidden items-center gap-7 md:flex" aria-label="Main">
           {NAV.map((n) => <Link key={n.href} href={n.href} className={link(n.href)}>{n.label}</Link>)}
           <div className="group relative">
-            <button type="button" className="flex items-center gap-1 py-1 text-sm hover:text-sage-dark">
+            <button type="button" className="flex items-center gap-1 py-1 text-sm hover:text-brand-dark">
               Categories <ChevronIcon dir="down" />
             </button>
             <div className="invisible absolute top-full left-0 z-10 w-44 rounded-xl border border-line bg-card p-2 opacity-0 shadow-lg transition group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
@@ -78,7 +81,7 @@ export function Header() {
           <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
             <SearchIcon />
             <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search serums, cleansers, ingredients…" className="h-9 flex-1 bg-transparent outline-none" />
-            <button className="rounded-full bg-sage px-5 py-1.5 text-sm text-white hover:bg-sage-dark">Search</button>
+            <button className="rounded-full bg-ink px-5 py-1.5 text-sm text-white hover:bg-brand hover:text-ink">Search</button>
           </div>
         </form>
       )}

@@ -9,7 +9,7 @@ export function Carousel({ children, label }: { children: ReactNode; label: stri
     const el = ref.current;
     if (el) el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: 'smooth' });
   };
-  const arrow = 'absolute top-1/3 z-[1] hidden h-10 w-10 items-center justify-center rounded-full border border-line bg-card shadow md:flex hover:border-sage';
+  const arrow = 'absolute top-1/3 z-[1] hidden h-10 w-10 items-center justify-center rounded-full border border-line bg-card shadow md:flex hover:border-brand';
 
   return (
     <div className="relative">

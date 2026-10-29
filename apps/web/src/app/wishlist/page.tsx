@@ -10,7 +10,7 @@ export default function Wishlist() {
   const items = PRODUCTS.filter((p) => wishlist.includes(p.slug));
   return (
     <div className="py-12">
-      <h1 className="font-serif text-4xl">Wishlist</h1>
+      <h1 className="font-display text-4xl">Wishlist</h1>
       {items.length === 0 ? (
         <p className="mt-6 text-muted">Tap the heart on any product to save it here. <Link href="/shop" className="underline">Browse the shop</Link>.</p>
       ) : (
