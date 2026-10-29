@@ -1,0 +1,6 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "outDir": "dist", "incremental": true },
+  "include": ["src", "api"],
+  "exclude": ["node_modules", "dist"]
+}

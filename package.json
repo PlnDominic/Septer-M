@@ -1,0 +1,13 @@
+{
+  "name": "septer-m",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev:api": "pnpm --filter @septer-m/api dev",
+    "dev:web": "pnpm --filter @septer-m/web dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r --if-present test"
+  }
+}
