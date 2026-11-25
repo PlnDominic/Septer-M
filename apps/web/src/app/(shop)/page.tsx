@@ -10,12 +10,6 @@ import { TrustStrip } from '@/components/trust-strip';
 import { QuickAdd } from '@/components/quick-add';
 import { ArrowIcon } from '@/components/icons';
 
-const floating = [
-  { p: PRODUCTS.find((p) => p.slug === 'gentle-gel-cleanser')!, pos: 'top-6 left-4' },
-  { p: PRODUCTS.find((p) => p.slug === 'daily-sunscreen-spf-50')!, pos: 'bottom-6 right-4' },
-  { p: PRODUCTS.find((p) => p.slug === 'barrier-repair-moisturiser')!, pos: 'bottom-6 left-4 hidden lg:block' },
-];
-
 const SectionHead = ({ title, href }: { title: string; href: string }) => (
   <div className="mb-6 flex items-end justify-between">
     <h2 className="font-display text-2xl sm:text-3xl">{title}</h2>
@@ -29,26 +23,25 @@ export default function Home() {
 
   return (
     <>
-      {/* Hero */}
-      <section className="mt-6 grid items-stretch overflow-hidden rounded-3xl bg-mist md:grid-cols-2">
-        <div className="self-center px-6 py-10 sm:px-12 md:py-16">
+      {/* Hero: photo spans the full banner, text sits over a dark gradient for contrast */}
+      <section className="relative mt-6 overflow-hidden rounded-3xl bg-ink">
+        <Image
+          src="/images/lifestyle/hero-wide.jpg"
+          alt="Close-up of a woman applying moisturiser to her cheek"
+          fill
+          priority
+          sizes="(min-width: 1152px) 1120px, 100vw"
+          className="object-cover object-[72%_100%]"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/10" aria-hidden />
+        <div className="relative max-w-2xl px-6 py-9 text-white sm:px-12 md:py-10">
           <p className="mb-3 flex items-center gap-2 text-xs font-semibold tracking-widest uppercase"><span className="h-2 w-2 rounded-full bg-brand" aria-hidden />Skincare, made simple</p>
-          <h1 className="font-display text-4xl leading-[1.1] sm:text-5xl lg:text-6xl">Honest formulas for skin that feels like yours.</h1>
-          <p className="mt-5 max-w-sm text-muted">A short list of well-made essentials, designed to work together and delivered to the UK and Ghana.</p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/shop" className="inline-flex items-center gap-2 rounded-lg bg-ink px-6 py-3 font-medium text-white transition hover:bg-brand hover:text-ink">Shop now <ArrowIcon /></Link>
-            <Link href="/shop?collection=best" className="rounded-lg border border-line bg-card px-6 py-3 hover:border-brand">Best sellers</Link>
+          <h1 className="font-display text-[2rem] leading-[1.12] sm:text-4xl md:text-[2.5rem]">Honest formulas for skin that feels like yours.</h1>
+          <p className="mt-3 max-w-md text-white/85">A short list of well-made essentials, designed to work together and delivered to the UK and Ghana.</p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link href="/shop" className="inline-flex items-center gap-2 rounded-lg bg-brand px-6 py-2.5 font-semibold text-ink transition hover:bg-white">Shop now <ArrowIcon /></Link>
+            <Link href="/shop?collection=best" className="rounded-lg border border-white/70 px-6 py-2.5 font-medium text-white transition hover:bg-white hover:text-ink">Best sellers</Link>
           </div>
-        </div>
-        <div className="relative h-[380px] w-full sm:h-[460px] md:h-full md:min-h-[480px]">
-          <Image src="/images/lifestyle/hero.jpg" alt="Woman applying moisturiser to her cheek" fill priority sizes="(min-width: 768px) 50vw, 100vw" className="object-cover" />
-          {floating.map(({ p, pos }) => (
-            <Link key={p.slug} href={`/product/${p.slug}`} className={`absolute ${pos} w-28 rounded-xl bg-white p-2 shadow-lg transition hover:-translate-y-0.5 sm:w-36`}>
-              <ProductVisual product={p} square sizes="144px" className="mb-1.5 !rounded-lg" />
-              <p className="truncate text-[11px] font-medium">{p.name}</p>
-              <Price product={p} className="text-[11px] text-muted" />
-            </Link>
-          ))}
         </div>
       </section>
 
