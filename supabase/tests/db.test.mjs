@@ -98,6 +98,19 @@ describe('schema + seed', () => {
     assert.equal(p.role, 'customer');
   });
 
+  test('profile name comes from full_name (email sign-up) or name (Google)', async () => {
+    await db.exec(`insert into auth.users (id, email, raw_user_meta_data) values
+      ('00000000-0000-0000-0000-0000000000c1', 'email@example.com', '{"full_name":"Email Person"}'),
+      ('00000000-0000-0000-0000-0000000000c2', 'google@example.com', '{"name":"Google Person","avatar_url":"x"}'),
+      ('00000000-0000-0000-0000-0000000000c3', 'none@example.com', null)`);
+    const names = await q(`select email, full_name from public.profiles where email in ('email@example.com','google@example.com','none@example.com') order by email`);
+    assert.deepEqual(names, [
+      { email: 'email@example.com', full_name: 'Email Person' },
+      { email: 'google@example.com', full_name: 'Google Person' },
+      { email: 'none@example.com', full_name: null },
+    ]);
+  });
+
   test('constraints reject bad data', async () => {
     await assert.rejects(db.exec(`insert into public.products (slug, name, category_id, size_ml)
       select 'Bad Slug', 'x', id, 10 from public.categories limit 1`));

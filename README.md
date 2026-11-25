@@ -77,6 +77,18 @@ https://YOUR-DOMAIN/account
 https://YOUR-DOMAIN/account/reset
 ```
 
+**Google sign-in.** The "Continue with Google" button works through Supabase, but Google has to be switched on in two places first:
+
+1. In [Google Cloud Console](https://console.cloud.google.com/) create a project (or pick one), then **APIs & Services > OAuth consent screen** (set the app name to Septer-M and add your support email) and **Credentials > Create credentials > OAuth client ID > Web application**.
+2. Add this under **Authorized redirect URIs** (your Supabase project reference is the part before `.supabase.co` in the Project URL):
+   ```
+   https://YOUR-PROJECT-REF.supabase.co/auth/v1/callback
+   ```
+3. Copy the **Client ID** and **Client secret** into Supabase: **Authentication > Providers > Google**, switch it on and save.
+4. Make sure the Site URL and Redirect URLs above are set. Without them Google sends people back to the wrong place.
+
+Until Google is enabled in Supabase the button shows "Google sign-in isn't switched on for this store yet" instead of failing. Google accounts get a profile automatically (name included), exactly like email sign-ups. While the Google consent screen is in "Testing" mode only the test users you list can sign in; publish it to open it to everyone.
+
 Without the two variables the page shows a clear "sign-in isn't switched on yet" notice instead of a form. Customers can see only their own orders (Row Level Security), and an account becomes an admin only when you set `role = 'admin'` on its `profiles` row. The admin pages are not yet locked behind sign-in.
 
 ## Deploying to Vercel
