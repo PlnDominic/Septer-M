@@ -37,11 +37,11 @@ async function stock(slug) {
   return (await one('select stock from public.products where slug = $1', [slug])).stock;
 }
 
-function placeOrder({ items, region = 'UK', subtotal, shippingCost = 395, email = 'ada@example.com', userId = null, ttl = 30 }) {
+function placeOrder({ items, region = 'UK', subtotal, shippingCost = 395, email = 'ada@example.com', userId = null, ttl = 30, discountCode = null, expectedDiscount = null }) {
   return db.query(
     `select public.create_order($1, $2, $3::public.region_code, $4::jsonb, 'uk-standard', 'Standard delivery', '2-4 working days',
-                                $5, $6::jsonb, $7::jsonb, $8, $9) as r`,
-    [userId, email, region, JSON.stringify(UK_ADDRESS), shippingCost, JSON.stringify(CARD), JSON.stringify(items), subtotal, ttl],
+                                $5, $6::jsonb, $7::jsonb, $8, $9, $10, $11) as r`,
+    [userId, email, region, JSON.stringify(UK_ADDRESS), shippingCost, JSON.stringify(CARD), JSON.stringify(items), subtotal, ttl, discountCode, expectedDiscount],
   );
 }
 
@@ -408,5 +408,307 @@ describe('security (RLS and privileges)', () => {
     }
     const n = await as('service_role', null, async () => (await one('select public.release_expired_orders() as n')).n);
     assert.equal(typeof n, 'number');
+  });
+});
+
+
+/* ======================= discounts, newsletter, reviews ======================= */
+
+let codeSeq = 0;
+async function mkCode(over = {}) {
+  const c = { code: `TEST${++codeSeq}`, kind: 'percent', percent: 10, amount_gbp: null, amount_ghs: null, min_gbp: 0, min_ghs: 0, max_uses: null, first_order_only: false, one_per_email: true, restricted_email: null, starts_at: null, ends_at: null, active: true, ...over };
+  await db.query(
+    `insert into public.discount_codes (code, kind, percent, amount_gbp, amount_ghs, min_subtotal_gbp, min_subtotal_ghs, max_uses, first_order_only, one_per_email, restricted_email, starts_at, ends_at, active)
+     values ($1, $2::public.discount_kind, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+    [c.code, c.kind, c.percent, c.amount_gbp, c.amount_ghs, c.min_gbp, c.min_ghs, c.max_uses, c.first_order_only, c.one_per_email, c.restricted_email, c.starts_at, c.ends_at, c.active],
+  );
+  return c.code;
+}
+const SUNSCREEN = [{ slug: 'daily-sunscreen-spf-50', qty: 1 }]; // 1600 GBP / 21000 GHS
+const codeRow = async (code) => one('select uses from public.discount_codes where code = $1', [code]);
+let emailSeq = 0;
+const freshEmail = () => `buyer${++emailSeq}@example.com`;
+
+describe('discount codes', () => {
+  test('a percentage code reduces the total and records a redemption', async () => {
+    const code = await mkCode({ percent: 10 });
+    const email = freshEmail();
+    const r = (await placeOrder({ items: SUNSCREEN, subtotal: 1600, email, discountCode: code })).rows[0].r;
+    assert.equal(r.discount, 160);
+    assert.equal(r.total, 1600 - 160 + 395);
+    assert.equal((await codeRow(code)).uses, 1);
+    const o = await one('select discount, discount_code, total from public.orders where number = $1', [r.number]);
+    assert.deepEqual(o, { discount: 160, discount_code: code, total: 1835 });
+    assert.equal((await one('select count(*)::int n from public.discount_redemptions where order_id = $1', [r.id])).n, 1);
+  });
+
+  test('codes are case-insensitive and ignore stray spaces', async () => {
+    const code = await mkCode({ percent: 5 });
+    const r = (await placeOrder({ items: SUNSCREEN, subtotal: 1600, email: freshEmail(), discountCode: `  ${code.toLowerCase()} ` })).rows[0].r;
+    assert.equal(r.discount, 80);
+  });
+
+  test('a fixed code uses the amount for the order currency and never exceeds the products total', async () => {
+    const code = await mkCode({ kind: 'fixed', percent: null, amount_gbp: 500, amount_ghs: 6000 });
+    const uk = (await placeOrder({ items: SUNSCREEN, subtotal: 1600, email: freshEmail(), discountCode: code })).rows[0].r;
+    assert.equal(uk.discount, 500);
+    const big = await mkCode({ kind: 'fixed', percent: null, amount_gbp: 9999, amount_ghs: 99999 });
+    const capped = (await placeOrder({ items: SUNSCREEN, subtotal: 1600, email: freshEmail(), discountCode: big })).rows[0].r;
+    assert.equal(capped.discount, 1600);
+    assert.equal(capped.total, 395); // only delivery left to pay
+    const gh = (await db.query(
+      `select public.create_order(null, $1, 'GH', '{"firstName":"K"}'::jsonb, 'gh-regional', 'Regional', '2-5 days', 6000, '{"method":"card"}'::jsonb, $2::jsonb, 21000, 30, $3, null) as r`,
+      [freshEmail(), JSON.stringify(SUNSCREEN), code])).rows[0].r;
+    assert.equal(gh.discount, 6000);
+    assert.equal(gh.total, 21000 - 6000 + 6000);
+  });
+
+  test('rejects unknown, inactive, expired and not-yet-started codes with a clear reason', async () => {
+    const inactive = await mkCode({ active: false });
+    const expired = await mkCode({ ends_at: '2020-01-01T00:00:00Z' });
+    const future = await mkCode({ starts_at: '2099-01-01T00:00:00Z' });
+    for (const [code, reason] of [['NOPE', 'NOT_FOUND'], [inactive, 'INACTIVE'], [expired, 'EXPIRED'], [future, 'NOT_STARTED']]) {
+      await rejects(placeOrder({ items: SUNSCREEN, subtotal: 1600, email: freshEmail(), discountCode: code }), 'DISCOUNT_INVALID', reason);
+    }
+  });
+
+  test('enforces the minimum spend per currency', async () => {
+    const code = await mkCode({ min_gbp: 5000, min_ghs: 60000 });
+    await rejects(placeOrder({ items: SUNSCREEN, subtotal: 1600, email: freshEmail(), discountCode: code }), 'DISCOUNT_INVALID', 'MIN_SUBTOTAL');
+    const v = (await one(`select public.validate_discount($1, 'a@b.co', 'UK', 1600) as v`, [code])).v;
+    assert.deepEqual([v.valid, v.reason, v.min], [false, 'MIN_SUBTOTAL', 5000]);
+  });
+
+  test('max_uses is enforced and a failed order does not use up a redemption', async () => {
+    const code = await mkCode({ max_uses: 1 });
+    await placeOrder({ items: SUNSCREEN, subtotal: 1600, email: freshEmail(), discountCode: code });
+    await rejects(placeOrder({ items: SUNSCREEN, subtotal: 1600, email: freshEmail(), discountCode: code }), 'DISCOUNT_INVALID', 'USED_UP');
+    const code2 = await mkCode({ max_uses: 1 });
+    await rejects(placeOrder({ items: [{ slug: 'clay-purifying-mask', qty: 1 }], subtotal: 1700, email: freshEmail(), discountCode: code2 }), 'OUT_OF_STOCK');
+    assert.equal((await codeRow(code2)).uses, 0);
+  });
+
+  test('one use per email', async () => {
+    const code = await mkCode();
+    const email = freshEmail();
+    await placeOrder({ items: SUNSCREEN, subtotal: 1600, email, discountCode: code });
+    await rejects(placeOrder({ items: SUNSCREEN, subtotal: 1600, email, discountCode: code }), 'DISCOUNT_INVALID', 'ALREADY_USED');
+    await placeOrder({ items: SUNSCREEN, subtotal: 1600, email: freshEmail(), discountCode: code }); // someone else is fine
+  });
+
+  test('first-order-only codes need a customer who has never ordered', async () => {
+    const code = await mkCode({ first_order_only: true });
+    const returning = freshEmail();
+    await placeOrder({ items: SUNSCREEN, subtotal: 1600, email: returning });
+    await rejects(placeOrder({ items: SUNSCREEN, subtotal: 1600, email: returning, discountCode: code }), 'DISCOUNT_INVALID', 'FIRST_ORDER_ONLY');
+    const r = (await placeOrder({ items: SUNSCREEN, subtotal: 1600, email: freshEmail(), discountCode: code })).rows[0].r;
+    assert.equal(r.discount, 160);
+  });
+
+  test('a cancelled earlier order does not count against "first order"', async () => {
+    const code = await mkCode({ first_order_only: true });
+    const email = freshEmail();
+    const first = (await placeOrder({ items: SUNSCREEN, subtotal: 1600, email })).rows[0].r;
+    await db.query(`select public.set_order_status($1, 'cancelled', null, null)`, [first.number]);
+    assert.equal((await placeOrder({ items: SUNSCREEN, subtotal: 1600, email, discountCode: code })).rows[0].r.discount, 160);
+  });
+
+  test('a code issued to one email does not work for anyone else and does not reveal itself', async () => {
+    const email = freshEmail();
+    const code = await mkCode({ restricted_email: email });
+    await rejects(placeOrder({ items: SUNSCREEN, subtotal: 1600, email: freshEmail(), discountCode: code }), 'DISCOUNT_INVALID', 'NOT_FOUND');
+    assert.equal((await one(`select public.validate_discount($1, '', 'UK', 1600) as v`, [code])).v.reason, 'EMAIL_REQUIRED');
+    assert.equal((await placeOrder({ items: SUNSCREEN, subtotal: 1600, email: email.toUpperCase(), discountCode: code })).rows[0].r.discount, 160);
+  });
+
+  test('a stale expected discount fails the order (price changed)', async () => {
+    const code = await mkCode({ percent: 10 });
+    const stock = (await one(`select stock from public.products where slug = 'daily-sunscreen-spf-50'`)).stock;
+    await rejects(placeOrder({ items: SUNSCREEN, subtotal: 1600, email: freshEmail(), discountCode: code, expectedDiscount: 999 }), 'PRICE_CHANGED');
+    assert.equal((await one(`select stock from public.products where slug = 'daily-sunscreen-spf-50'`)).stock, stock);
+    assert.equal((await codeRow(code)).uses, 0);
+    await placeOrder({ items: SUNSCREEN, subtotal: 1600, email: freshEmail(), discountCode: code, expectedDiscount: 160 });
+  });
+
+  test('cancelling an order frees its code use so the customer can try again', async () => {
+    const code = await mkCode({ max_uses: 1 });
+    const email = freshEmail();
+    const r = (await placeOrder({ items: SUNSCREEN, subtotal: 1600, email, discountCode: code })).rows[0].r;
+    assert.equal((await codeRow(code)).uses, 1);
+    await db.query(`select public.set_order_status($1, 'cancelled', null, null)`, [r.number]);
+    assert.equal((await codeRow(code)).uses, 0);
+    assert.equal((await one('select count(*)::int n from public.discount_redemptions where order_id = $1', [r.id])).n, 0);
+    assert.equal((await placeOrder({ items: SUNSCREEN, subtotal: 1600, email, discountCode: code })).rows[0].r.discount, 160);
+  });
+
+  test('an expired unpaid order also frees its code use', async () => {
+    const code = await mkCode({ max_uses: 1 });
+    await placeOrder({ items: SUNSCREEN, subtotal: 1600, email: freshEmail(), discountCode: code, ttl: -5 });
+    assert.equal((await codeRow(code)).uses, 1);
+    await db.query('select public.release_expired_orders()');
+    assert.equal((await codeRow(code)).uses, 0);
+  });
+
+  test('the database refuses totals that do not add up', async () => {
+    const o = (await placeOrder({ items: SUNSCREEN, subtotal: 1600, email: freshEmail() })).rows[0].r;
+    await assert.rejects(db.query('update public.orders set discount = subtotal + 1 where id = $1', [o.id]));
+    await assert.rejects(db.query('update public.orders set total = total + 1 where id = $1', [o.id]));
+  });
+
+  test('validate_discount reports the amount without touching anything', async () => {
+    const code = await mkCode({ percent: 25 });
+    const v = (await one(`select public.validate_discount($1, 'x@y.co', 'UK', 2000) as v`, [code])).v;
+    assert.deepEqual([v.valid, v.discount, v.code], [true, 500, code]);
+    assert.equal((await codeRow(code)).uses, 0);
+  });
+
+  test('codes and redemptions are invisible to shoppers', async () => {
+    for (const t of ['discount_codes', 'discount_redemptions']) {
+      await as('anon', null, () => assert.rejects(q(`select * from public.${t}`), /permission denied/));
+      await as('authenticated', ALICE, () => assert.rejects(q(`select * from public.${t}`), /permission denied/));
+    }
+  });
+});
+
+describe('newsletter', () => {
+  test('subscribing issues a single-use welcome code that only that email can use', async () => {
+    const email = freshEmail();
+    const r = (await one('select public.subscribe_email($1, $2) as r', [email.toUpperCase(), 'footer'])).r;
+    assert.equal(r.email, email);
+    assert.equal(r.isNew, true);
+    assert.match(r.code, /^WELCOME-[A-F0-9]{6}$/);
+    const ok = (await one(`select public.validate_discount($1, $2, 'UK', 2000) as v`, [r.code, email])).v;
+    assert.deepEqual([ok.valid, ok.discount], [true, 200]);
+    assert.equal((await one(`select public.validate_discount($1, $2, 'UK', 2000) as v`, [r.code, freshEmail()])).v.reason, 'NOT_FOUND');
+  });
+
+  test('subscribing again returns the same code and does not create another', async () => {
+    const email = freshEmail();
+    const a = (await one('select public.subscribe_email($1) as r', [email])).r;
+    const b = (await one('select public.subscribe_email($1) as r', [email])).r;
+    assert.equal(b.code, a.code);
+    assert.equal(b.isNew, false);
+    assert.equal((await one('select count(*)::int n from public.discount_codes where restricted_email = $1', [email])).n, 1);
+  });
+
+  test('the welcome code works once, on a first order', async () => {
+    const email = freshEmail();
+    const { code } = (await one('select public.subscribe_email($1) as r', [email])).r;
+    const o = (await placeOrder({ items: SUNSCREEN, subtotal: 1600, email, discountCode: code })).rows[0].r;
+    assert.equal(o.discount, 160);
+    await rejects(placeOrder({ items: SUNSCREEN, subtotal: 1600, email, discountCode: code }), 'DISCOUNT_INVALID');
+  });
+
+  test('rejects things that are not emails', async () => {
+    for (const bad of ['', 'nope', 'a@b', '@x.co', 'a b@c.co']) await rejects(one('select public.subscribe_email($1)', [bad]), 'INVALID_EMAIL');
+  });
+
+  test('unsubscribe works by token, is idempotent, and resubscribing keeps the same code', async () => {
+    const email = freshEmail();
+    const a = (await one('select public.subscribe_email($1) as r', [email])).r;
+    assert.equal((await one('select public.unsubscribe_email($1::uuid) as ok', [a.token])).ok, true);
+    assert.equal((await one('select public.unsubscribe_email($1::uuid) as ok', [a.token])).ok, true);
+    assert.equal((await one('select public.unsubscribe_email(gen_random_uuid()) as ok')).ok, false);
+    assert.notEqual((await one('select unsubscribed_at from public.subscribers where email = $1', [email])).unsubscribed_at, null);
+    const again = (await one('select public.subscribe_email($1) as r', [email])).r;
+    assert.equal(again.code, a.code);
+    assert.equal((await one('select unsubscribed_at from public.subscribers where email = $1', [email])).unsubscribed_at, null);
+  });
+
+  test('the subscriber list is private', async () => {
+    await as('anon', null, () => assert.rejects(q('select * from public.subscribers'), /permission denied/));
+    await as('authenticated', ALICE, () => assert.rejects(q('select * from public.subscribers'), /permission denied/));
+  });
+});
+
+describe('reviews', () => {
+  const CLEANSER = [{ slug: 'gentle-gel-cleanser', qty: 1 }];
+  const review = (userId, slug = 'gentle-gel-cleanser', rating = 5, body = 'Gentle and effective, would buy again.') =>
+    db.query('select public.submit_review($1, $2, $3, $4, $5, $6) as r', [userId, slug, rating, 'Lovely', body, 'Alice A']);
+  const product = () => one(`select rating_value::float as v, rating_count as n from public.products where slug = 'gentle-gel-cleanser'`);
+  let aliceReview;
+
+  async function ship(number) {
+    for (const s of ['paid', 'processing', 'shipped']) await db.query(`select public.set_order_status($1, $2::public.order_status, null, null)`, [number, s]);
+  }
+
+  test('only customers whose order has shipped can review', async () => {
+    const o = (await placeOrder({ items: CLEANSER, subtotal: 1400, userId: ALICE, email: 'alice@example.com' })).rows[0].r;
+    await rejects(review(ALICE), 'NOT_PURCHASED'); // still unpaid
+    await db.query(`select public.set_order_status($1, 'paid', null, null)`, [o.number]);
+    await rejects(review(ALICE), 'NOT_PURCHASED'); // paid but not shipped
+    await rejects(review(BOB), 'NOT_PURCHASED'); // never bought
+    await ship(o.number).catch(() => {});
+  });
+
+  test('a verified review starts as pending and is hidden from the public', async () => {
+    const o = (await placeOrder({ items: CLEANSER, subtotal: 1400, userId: ALICE, email: 'alice@example.com' })).rows[0].r;
+    await ship(o.number);
+    aliceReview = (await review(ALICE)).rows[0].r;
+    assert.equal(aliceReview.status, 'pending');
+    assert.equal((await as('anon', null, () => q('select * from public.reviews'))).length, 0);
+    assert.deepEqual(await product(), { v: 0, n: 0 });
+  });
+
+  test('approving publishes it and updates the product rating', async () => {
+    await db.query(`select public.moderate_review($1, 'approved')`, [aliceReview.id]);
+    assert.equal((await as('anon', null, () => q('select * from public.reviews'))).length, 1);
+    assert.deepEqual(await product(), { v: 5, n: 1 });
+  });
+
+  test('one review per customer per product', async () => {
+    await rejects(review(ALICE), 'ALREADY_REVIEWED');
+  });
+
+  test('the average is rounded to one decimal and only counts approved reviews', async () => {
+    const o = (await placeOrder({ items: CLEANSER, subtotal: 1400, userId: BOB, email: 'bob@example.com' })).rows[0].r;
+    await ship(o.number);
+    const bob = (await review(BOB, 'gentle-gel-cleanser', 4)).rows[0].r;
+    assert.deepEqual(await product(), { v: 5, n: 1 }); // pending does not count
+    await db.query(`select public.moderate_review($1, 'approved')`, [bob.id]);
+    assert.deepEqual(await product(), { v: 4.5, n: 2 });
+    await db.query(`select public.moderate_review($1, 'rejected')`, [bob.id]);
+    assert.deepEqual(await product(), { v: 5, n: 1 });
+    await db.query('delete from public.reviews where id = $1', [bob.id]);
+    assert.deepEqual(await product(), { v: 5, n: 1 });
+  });
+
+  test('bad input is rejected by the database', async () => {
+    const o = (await placeOrder({ items: [{ slug: 'daily-sunscreen-spf-50', qty: 1 }], subtotal: 1600, userId: ALICE, email: 'alice@example.com' })).rows[0].r;
+    await ship(o.number);
+    await assert.rejects(review(ALICE, 'daily-sunscreen-spf-50', 6));
+    await assert.rejects(review(ALICE, 'daily-sunscreen-spf-50', 0));
+    await assert.rejects(review(ALICE, 'daily-sunscreen-spf-50', 5, 'short'));
+    await rejects(review(ALICE, 'no-such-product'), 'PRODUCT_NOT_FOUND');
+  });
+
+  test('customers see their own pending reviews, admins see everything, others see only approved', async () => {
+    const o = (await placeOrder({ items: [{ slug: 'daily-sunscreen-spf-50', qty: 1 }], subtotal: 1600, userId: BOB, email: 'bob@example.com' })).rows[0].r;
+    await ship(o.number);
+    await review(BOB, 'daily-sunscreen-spf-50', 3, 'It was okay, nothing special for me.'); // pending
+    const bobSees = await as('authenticated', BOB, () => q('select user_id, status from public.reviews'));
+    assert.ok(bobSees.some((r) => r.user_id === BOB && r.status === 'pending'));
+    assert.ok(bobSees.every((r) => r.status === 'approved' || r.user_id === BOB));
+    const adminSees = await as('authenticated', ADMIN, () => q('select status from public.reviews'));
+    assert.ok(adminSees.some((r) => r.status === 'pending'));
+    const anonSees = await as('anon', null, () => q('select status from public.reviews'));
+    assert.ok(anonSees.every((r) => r.status === 'approved'));
+  });
+
+  test('nobody can write reviews directly; moderation is service-only', async () => {
+    await as('authenticated', ALICE, () => assert.rejects(q(`update public.reviews set status = 'approved'`), /permission denied/));
+    await as('authenticated', ALICE, () => assert.rejects(q(`insert into public.reviews (product_id, user_id, rating, body, display_name) select id, '${ALICE}', 5, 'a long enough review text', 'x' from public.products limit 1`), /permission denied/));
+    await as('authenticated', ALICE, () => assert.rejects(q(`select public.moderate_review(gen_random_uuid(), 'approved')`), /permission denied for function/));
+    await rejects(one(`select public.moderate_review(gen_random_uuid(), 'approved')`), 'REVIEW_NOT_FOUND');
+  });
+
+  test('the new business functions cannot be called by shoppers', async () => {
+    const calls = [
+      `select public.validate_discount('X', 'a@b.co', 'UK', 100)`,
+      `select public.subscribe_email('a@b.co')`,
+      `select public.unsubscribe_email(gen_random_uuid())`,
+      `select public.submit_review('${ALICE}', 'x', 5, 't', 'long enough body text', 'n')`,
+    ];
+    for (const role of ['anon', 'authenticated']) for (const c of calls) await as(role, ALICE, () => assert.rejects(q(c), /permission denied for function/));
   });
 });
