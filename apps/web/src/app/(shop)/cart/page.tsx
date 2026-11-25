@@ -5,6 +5,7 @@ import { formatMoney } from '@/lib/money';
 import { getProduct } from '@/lib/products';
 import { useShop } from '@/components/providers';
 import { ProductVisual } from '@/components/product-visual';
+import { CartDelivery } from '@/components/cart-delivery';
 
 export default function CartPage() {
   const { lines, currency, setQty } = useShop();
@@ -53,8 +54,8 @@ export default function CartPage() {
 
         <aside className="h-fit rounded-2xl border border-line bg-card p-6">
           <h2 className="font-medium">Order summary</h2>
-          <p className="mt-4 flex justify-between"><span>Subtotal</span><span>{formatMoney(subtotal, currency)}</span></p>
-          <p className="mt-1 text-sm text-muted">Delivery calculated at checkout.</p>
+          <p className="mt-4 mb-4 flex justify-between text-sm"><span>Subtotal</span><span>{formatMoney(subtotal, currency)}</span></p>
+          <CartDelivery subtotal={subtotal} />
           <Link
             href="/checkout"
             className="mt-6 flex h-11 w-full items-center justify-center rounded-full bg-ink font-medium text-white transition hover:bg-brand hover:text-ink"

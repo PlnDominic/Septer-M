@@ -20,7 +20,7 @@ export interface Product {
   bestSeller: boolean;
   /** Original price per currency, if on sale (minor units). */
   compareAt?: Record<Currency, number>;
-  /** Placeholder values until real reviews exist. */
+  /** Average and number of real, verified reviews. count 0 means no reviews yet and nothing is shown. */
   rating: { value: number; count: number };
 }
 
@@ -133,14 +133,14 @@ const BASE: Omit<Product, 'isNew' | 'bestSeller' | 'compareAt' | 'rating' | 'ima
 ];
 
 const META: Record<string, Pick<Product, 'isNew' | 'bestSeller' | 'compareAt' | 'rating'>> = {
-  'gentle-gel-cleanser': { isNew: false, bestSeller: true, rating: { value: 4.8, count: 128 } },
-  'vitamin-c-brightening-serum': { isNew: true, bestSeller: true, rating: { value: 4.7, count: 94 } },
-  'niacinamide-clarifying-serum': { isNew: false, bestSeller: true, rating: { value: 4.6, count: 156 } },
-  'barrier-repair-moisturiser': { isNew: true, bestSeller: false, rating: { value: 4.9, count: 71 } },
-  'light-gel-moisturiser': { isNew: false, bestSeller: false, compareAt: { GBP: 2100, GHS: 27000 }, rating: { value: 4.5, count: 87 } },
-  'daily-sunscreen-spf-50': { isNew: true, bestSeller: true, rating: { value: 4.8, count: 203 } },
-  'overnight-hydration-mask': { isNew: true, bestSeller: false, rating: { value: 4.7, count: 58 } },
-  'clay-purifying-mask': { isNew: false, bestSeller: false, compareAt: { GBP: 2000, GHS: 26000 }, rating: { value: 4.4, count: 66 } },
+  'gentle-gel-cleanser': { isNew: false, bestSeller: true, rating: { value: 0, count: 0 } },
+  'vitamin-c-brightening-serum': { isNew: true, bestSeller: true, rating: { value: 0, count: 0 } },
+  'niacinamide-clarifying-serum': { isNew: false, bestSeller: true, rating: { value: 0, count: 0 } },
+  'barrier-repair-moisturiser': { isNew: true, bestSeller: false, rating: { value: 0, count: 0 } },
+  'light-gel-moisturiser': { isNew: false, bestSeller: false, compareAt: { GBP: 2100, GHS: 27000 }, rating: { value: 0, count: 0 } },
+  'daily-sunscreen-spf-50': { isNew: true, bestSeller: true, rating: { value: 0, count: 0 } },
+  'overnight-hydration-mask': { isNew: true, bestSeller: false, rating: { value: 0, count: 0 } },
+  'clay-purifying-mask': { isNew: false, bestSeller: false, compareAt: { GBP: 2000, GHS: 26000 }, rating: { value: 0, count: 0 } },
 };
 
 export const PRODUCTS: Product[] = BASE.map((p) => ({ ...p, ...META[p.slug], image: `/images/products/${p.slug}.jpg` }));

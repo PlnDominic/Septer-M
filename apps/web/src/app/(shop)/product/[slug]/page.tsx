@@ -2,7 +2,8 @@ import { notFound } from 'next/navigation';
 import { PRODUCTS, getProduct } from '@/lib/products';
 import { Price } from '@/components/price';
 import { ProductVisual } from '@/components/product-visual';
-import { AddToCart } from '@/components/add-to-cart';
+import { PurchasePanel } from '@/components/purchase-panel';
+import { DeliveryInfo } from '@/components/delivery-info';
 import { ProductCard } from '@/components/product-card';
 
 export function generateStaticParams() {
@@ -20,9 +21,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const related = PRODUCTS.filter((p) => p.category === product.category && p.slug !== product.slug).slice(0, 4);
 
   return (
-    <div className="py-12">
+    <div className="pt-6 pb-24 md:py-12">
       <div className="grid gap-10 md:grid-cols-2">
-        <ProductVisual product={product} sizes="(min-width: 768px) 50vw, 100vw" priority />
+        <ProductVisual product={product} sizes="(min-width: 768px) 50vw, 100vw" priority className="!aspect-square md:!aspect-[4/5]" />
         <div>
           <p className="flex items-center gap-2 text-sm tracking-widest uppercase"><span className="h-2 w-2 rounded-full bg-brand" aria-hidden />{product.category}</p>
           <h1 className="mt-1 font-display text-4xl">{product.name}</h1>
@@ -30,7 +31,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           <p className="mt-5 text-2xl">
             <Price product={product} /> <span className="text-sm text-muted">· {product.sizeMl} ml</span>
           </p>
-          <div className="mt-6 max-w-sm"><AddToCart slug={product.slug} /></div>
+          <div className="mt-6"><PurchasePanel product={product} /></div>
+          <DeliveryInfo />
 
           <dl className="mt-10 space-y-6 text-sm">
             <div>

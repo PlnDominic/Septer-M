@@ -91,6 +91,20 @@ Until Google is enabled in Supabase the button shows "Google sign-in isn't switc
 
 Without the two variables the page shows a clear "sign-in isn't switched on yet" notice instead of a form. Customers can see only their own orders (Row Level Security), and an account becomes an admin only when you set `role = 'admin'` on its `profiles` row. The admin pages are not yet locked behind sign-in.
 
+## Before launch
+
+Run `pnpm check:launch` for a live checklist of what is still missing. The storefront shows your business details only when you set them, and never invents any:
+
+| Variable | Where it appears |
+|---|---|
+| `NEXT_PUBLIC_SUPPORT_EMAIL`, `NEXT_PUBLIC_WHATSAPP`, `NEXT_PUBLIC_SUPPORT_HOURS` | Contact page and footer |
+| `NEXT_PUBLIC_BUSINESS_LEGAL_NAME`, `NEXT_PUBLIC_COMPANY_NUMBER`, `NEXT_PUBLIC_BUSINESS_ADDRESS`, `NEXT_PUBLIC_VAT_NUMBER` | Footer, Contact, Terms, Privacy (UK law expects a shop to show these) |
+| `NEXT_PUBLIC_INSTAGRAM_URL`, `NEXT_PUBLIC_TIKTOK_URL` | Footer |
+
+The Delivery, Returns, Privacy and Terms pages are good-faith drafts written from how the shop currently works. Their delivery prices, times and free-delivery thresholds come from the same code as checkout (`packages/shared/src/checkout.ts`), so they cannot disagree. Have a solicitor read the policy wording before you launch, and update `LEGAL_UPDATED` in `apps/web/src/lib/site.ts` when you change it.
+
+Ratings are hidden until real reviews exist (`rating.count` is 0 for every product). Do not add placeholder ratings or reviews: fake reviews are illegal in the UK.
+
 ## Deploying to Vercel
 
 One Vercel project, rooted at `apps/web` (Framework: Next.js).

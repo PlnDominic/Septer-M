@@ -24,21 +24,27 @@ export interface ShippingOption {
   price: number;
   /** Free when the subtotal (minor units) reaches this amount. */
   freeOver?: number;
+  /** Delivery time in working days, counted from dispatch day (see estimateArrival). */
+  minDays: number;
+  maxDays: number;
 }
 
 export const FREE_SHIPPING_OVER: Record<Currency, number> = { GBP: 4000, GHS: 50000 };
 
+const UK_OPTIONS: ShippingOption[] = [
+  { id: 'uk-standard', label: 'Standard delivery', detail: '2–4 working days', price: 395, freeOver: FREE_SHIPPING_OVER.GBP, minDays: 2, maxDays: 4 },
+  { id: 'uk-express', label: 'Express delivery', detail: 'Next working day if ordered by 1pm', price: 695, minDays: 1, maxDays: 1 },
+];
+const GH_ACCRA: ShippingOption = { id: 'gh-accra', label: 'Accra & Tema delivery', detail: '1–2 working days', price: 3500, freeOver: FREE_SHIPPING_OVER.GHS, minDays: 1, maxDays: 2 };
+const GH_REGIONAL: ShippingOption = { id: 'gh-regional', label: 'Regional delivery', detail: '2–5 working days', price: 6000, freeOver: FREE_SHIPPING_OVER.GHS, minDays: 2, maxDays: 5 };
+
 export function shippingOptions(region: Region, ghRegion?: string): ShippingOption[] {
-  if (region === 'UK') {
-    return [
-      { id: 'uk-standard', label: 'Standard delivery', detail: '2–4 working days', price: 395, freeOver: FREE_SHIPPING_OVER.GBP },
-      { id: 'uk-express', label: 'Express delivery', detail: 'Next working day if ordered by 1pm', price: 695 },
-    ];
-  }
-  return ghRegion === 'Greater Accra'
-    ? [{ id: 'gh-accra', label: 'Accra & Tema delivery', detail: '1–2 working days', price: 3500, freeOver: FREE_SHIPPING_OVER.GHS }]
-    : [{ id: 'gh-regional', label: 'Regional delivery', detail: '2–5 working days', price: 6000, freeOver: FREE_SHIPPING_OVER.GHS }];
+  if (region === 'UK') return UK_OPTIONS;
+  return ghRegion === 'Greater Accra' ? [GH_ACCRA] : [GH_REGIONAL];
 }
+
+/** Every option a market offers, for showing delivery info before the address is known. */
+export const allShippingOptions = (region: Region): ShippingOption[] => (region === 'UK' ? UK_OPTIONS : [GH_ACCRA, GH_REGIONAL]);
 
 export const shippingCost = (option: ShippingOption, subtotal: number): number =>
   option.freeOver !== undefined && subtotal >= option.freeOver ? 0 : option.price;

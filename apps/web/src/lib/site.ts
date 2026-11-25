@@ -13,3 +13,6 @@ export const NAV_AFTER = [
   { href: '/about', label: 'About' },
   { href: '/contact', label: 'Contact' },
 ];
+
+/** When the policy pages were last reviewed. Update when their wording changes. */
+export const LEGAL_UPDATED = '25 November 2026';

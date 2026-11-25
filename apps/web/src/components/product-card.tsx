@@ -38,7 +38,7 @@ export function ProductCard({ product }: { product: Product }) {
         <div className="min-w-0">
           <Link href={`/product/${product.slug}`} className="block font-medium leading-snug hover:text-brand-dark">{product.name}</Link>
           <p className="mt-0.5 text-sm font-medium"><Price product={product} /></p>
-          <div className="mt-1"><Stars value={product.rating.value} count={product.rating.count} /></div>
+          {product.rating.count > 0 && <div className="mt-1"><Stars value={product.rating.value} count={product.rating.count} /></div>}
         </div>
         <button
           type="button"
