@@ -23,24 +23,27 @@ export default function Home() {
 
   return (
     <>
-      {/* Hero: photo spans the full banner, text sits over a dark gradient for contrast */}
-      <section className="relative mt-6 overflow-hidden rounded-3xl bg-ink">
+      {/* Hero: full-bleed photo (breaks out of the page container to the window edges);
+          the text stays aligned with the rest of the page. */}
+      <section className="relative left-1/2 w-screen -translate-x-1/2 overflow-hidden bg-ink">
         <Image
           src="/images/lifestyle/hero-wide.jpg"
           alt="Close-up of a woman applying moisturiser to her cheek"
           fill
           priority
-          sizes="(min-width: 1152px) 1120px, 100vw"
-          className="object-cover object-[72%_100%]"
+          sizes="100vw"
+          className="object-cover object-[72%_60%]"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/10" aria-hidden />
-        <div className="relative max-w-2xl px-6 py-9 text-white sm:px-12 md:py-10">
-          <p className="mb-3 flex items-center gap-2 text-xs font-semibold tracking-widest uppercase"><span className="h-2 w-2 rounded-full bg-brand" aria-hidden />Skincare, made simple</p>
-          <h1 className="font-display text-[2rem] leading-[1.12] sm:text-4xl md:text-[2.5rem]">Honest formulas for skin that feels like yours.</h1>
-          <p className="mt-3 max-w-md text-white/85">A short list of well-made essentials, designed to work together and delivered to the UK and Ghana.</p>
-          <div className="mt-5 flex flex-wrap gap-3">
-            <Link href="/shop" className="inline-flex items-center gap-2 rounded-lg bg-brand px-6 py-2.5 font-semibold text-ink transition hover:bg-white">Shop now <ArrowIcon /></Link>
-            <Link href="/shop?collection=best" className="rounded-lg border border-white/70 px-6 py-2.5 font-medium text-white transition hover:bg-white hover:text-ink">Best sellers</Link>
+        <div className="relative mx-auto max-w-6xl px-4 py-9 md:py-11">
+          <div className="max-w-2xl text-white">
+            <p className="mb-3 flex items-center gap-2 text-xs font-semibold tracking-widest uppercase"><span className="h-2 w-2 rounded-full bg-brand" aria-hidden />Skincare, made simple</p>
+            <h1 className="font-display text-[2rem] leading-[1.12] sm:text-4xl md:text-[2.5rem]">Honest formulas for skin that feels like yours.</h1>
+            <p className="mt-3 max-w-md text-white/85">A short list of well-made essentials, designed to work together and delivered to the UK and Ghana.</p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Link href="/shop" className="inline-flex items-center gap-2 rounded-lg bg-brand px-6 py-2.5 font-semibold text-ink transition hover:bg-white">Shop now <ArrowIcon /></Link>
+              <Link href="/shop?collection=best" className="rounded-lg border border-white/70 px-6 py-2.5 font-medium text-white transition hover:bg-white hover:text-ink">Best sellers</Link>
+            </div>
           </div>
         </div>
       </section>

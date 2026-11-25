@@ -14,7 +14,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={poppins.variable}>
       {/* Flex column so the footer sits at the bottom of the window on short pages. */}
-      <body className="flex min-h-screen flex-col">
+      <body className="flex min-h-screen flex-col overflow-x-clip">
         <Providers>{children}</Providers>
       </body>
     </html>
