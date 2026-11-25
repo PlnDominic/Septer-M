@@ -29,9 +29,9 @@ export function ProductCard({ product }: { product: Product }) {
         onClick={() => toggleWish(product.slug)}
         aria-pressed={wished}
         aria-label={wished ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
-        className={`absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-sm transition hover:scale-105 ${wished ? 'text-brand' : 'text-ink'}`}
+        className={`absolute top-1.5 right-1.5 flex h-11 w-11 items-center justify-center rounded-full transition hover:scale-105 ${wished ? 'text-brand-dark' : 'text-ink'}`}
       >
-        <HeartIcon filled={wished} width={16} height={16} />
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-sm"><HeartIcon filled={wished} width={16} height={16} /></span>
       </button>
 
       <div className="mt-3 flex items-start justify-between gap-2">
@@ -48,7 +48,7 @@ export function ProductCard({ product }: { product: Product }) {
             setAdded(true);
             setTimeout(() => setAdded(false), 1500);
           }}
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition ${added ? 'bg-brand !text-ink' : 'bg-ink hover:bg-brand hover:text-ink'}`}
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white transition ${added ? 'bg-brand !text-ink' : 'bg-ink hover:bg-brand hover:text-ink'}`}
         >
           {added ? '✓' : <BagIcon width={16} height={16} />}
         </button>

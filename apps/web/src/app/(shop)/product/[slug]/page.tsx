@@ -5,6 +5,7 @@ import { ProductVisual } from '@/components/product-visual';
 import { PurchasePanel } from '@/components/purchase-panel';
 import { DeliveryInfo } from '@/components/delivery-info';
 import { ProductCard } from '@/components/product-card';
+import { SITE_URL } from '@/lib/site-url';
 
 export function generateStaticParams() {
   return PRODUCTS.map((p) => ({ slug: p.slug }));
@@ -12,7 +13,14 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const product = getProduct((await params).slug);
-  return product ? { title: product.name, description: product.tagline } : {};
+  if (!product) return {};
+  const description = `${product.tagline}. ${product.sizeMl} ml. Delivered to the UK and Ghana.`;
+  return {
+    title: product.name,
+    description,
+    alternates: { canonical: `/product/${product.slug}` },
+    openGraph: { type: 'website', title: product.name, description, images: [{ url: product.image, alt: product.name }] },
+  };
 }
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -22,6 +30,28 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   return (
     <div className="pt-6 pb-24 md:py-12">
+      {/* Structured data so search engines can show price and delivery. Availability is left out until stock is live. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Product',
+            name: product.name,
+            description: product.tagline,
+            sku: product.slug,
+            category: product.category,
+            image: `${SITE_URL}${product.image}`,
+            brand: { '@type': 'Brand', name: 'Septer-M' },
+            offers: (['GBP', 'GHS'] as const).map((c) => ({
+              '@type': 'Offer',
+              url: `${SITE_URL}/product/${product.slug}`,
+              priceCurrency: c,
+              price: (product.price[c] / 100).toFixed(2),
+            })),
+          }).replace(/</g, '\\u003c'),
+        }}
+      />
       <div className="grid gap-10 md:grid-cols-2">
         <ProductVisual product={product} sizes="(min-width: 768px) 50vw, 100vw" priority className="!aspect-square md:!aspect-[4/5]" />
         <div>

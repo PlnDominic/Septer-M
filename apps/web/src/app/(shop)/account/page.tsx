@@ -1,12 +1,21 @@
 'use client';
 
+import { Suspense, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/components/auth-provider';
 import { AuthForms } from '@/components/account/auth-forms';
 import { OrderHistory } from '@/components/account/order-history';
 
-export default function Account() {
+function AccountContent() {
   const { configured, loading, user, profile, recovering, signOut } = useAuth();
+  const router = useRouter();
+  const next = useSearchParams().get('next');
+
+  // Sent here from checkout? Go back once signed in. Only same-site paths are allowed.
+  useEffect(() => {
+    if (user && next && /^\/(?!\/)/.test(next)) router.replace(next);
+  }, [user, next, router]);
 
   if (!configured) {
     return (
@@ -56,5 +65,13 @@ export default function Account() {
       <h2 className="mt-10 mb-4 text-lg">Your orders</h2>
       <OrderHistory />
     </div>
+  );
+}
+
+export default function Account() {
+  return (
+    <Suspense fallback={<div className="mx-auto max-w-md py-16 text-sm text-muted" aria-live="polite">Loading…</div>}>
+      <AccountContent />
+    </Suspense>
   );
 }

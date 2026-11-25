@@ -16,3 +16,6 @@ export const NAV_AFTER = [
 
 /** When the policy pages were last reviewed. Update when their wording changes. */
 export const LEGAL_UPDATED = '25 November 2026';
+
+/** Price filter bands per currency (minor units): under the first value, between, over the second. */
+export const PRICE_BANDS = { GBP: [1500, 2500], GHS: [20000, 30000] } as const;

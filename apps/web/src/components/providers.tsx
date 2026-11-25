@@ -3,6 +3,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { REGION_CURRENCY, type Currency, type Region } from '@septer-m/shared';
 import { AuthProvider } from './auth-provider';
+import { ToastProvider, useToast } from './toast';
+import { getProduct } from '@/lib/products';
 
 interface CartLine {
   slug: string;
@@ -17,7 +19,8 @@ interface ShopState {
   setRegion: (r: Region) => void;
   lines: CartLine[];
   count: number;
-  add: (slug: string, qty?: number) => void;
+  /** Adds to the bag and shows a toast with shortcuts, unless `silent`. */
+  add: (slug: string, qty?: number, options?: { silent?: boolean }) => void;
   setQty: (slug: string, qty: number) => void;
   clear: () => void;
   wishlist: string[];
@@ -42,7 +45,8 @@ const write = (key: string, value: unknown) => {
   }
 };
 
-export function Providers({ children }: { children: ReactNode }) {
+function ShopProvider({ children }: { children: ReactNode }) {
+  const toast = useToast();
   const [region, setRegionState] = useState<Region>('UK');
   const [lines, setLines] = useState<CartLine[]>([]);
   const [wishlist, setWishlist] = useState<string[]>([]);
@@ -72,13 +76,24 @@ export function Providers({ children }: { children: ReactNode }) {
     write('sm.region', r);
   }, []);
 
-  const add = useCallback((slug: string, qty = 1) => {
-    setLines((cur) =>
-      cur.some((l) => l.slug === slug)
-        ? cur.map((l) => (l.slug === slug ? { ...l, qty: l.qty + qty } : l))
-        : [...cur, { slug, qty }],
-    );
-  }, []);
+  const add = useCallback<ShopState['add']>(
+    (slug, qty = 1, options) => {
+      setLines((cur) =>
+        cur.some((l) => l.slug === slug)
+          ? cur.map((l) => (l.slug === slug ? { ...l, qty: l.qty + qty } : l))
+          : [...cur, { slug, qty }],
+      );
+      if (options?.silent) return;
+      const name = getProduct(slug)?.name ?? 'Item';
+      toast.show(
+        <>
+          <strong>{qty > 1 ? `${qty} × ${name}` : name}</strong> added to your bag
+        </>,
+        { actions: [{ label: 'Checkout', href: '/checkout', primary: true }, { label: 'View bag', href: '/cart' }] },
+      );
+    },
+    [toast],
+  );
 
   const setQty = useCallback((slug: string, qty: number) => {
     setLines((cur) => (qty <= 0 ? cur.filter((l) => l.slug !== slug) : cur.map((l) => (l.slug === slug ? { ...l, qty } : l))));
@@ -103,9 +118,15 @@ export function Providers({ children }: { children: ReactNode }) {
     [ready, region, setRegion, lines, add, setQty, clear, wishlist, toggleWish],
   );
 
+  return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>;
+}
+
+export function Providers({ children }: { children: ReactNode }) {
   return (
     <AuthProvider>
-      <ShopContext.Provider value={value}>{children}</ShopContext.Provider>
+      <ToastProvider>
+        <ShopProvider>{children}</ShopProvider>
+      </ToastProvider>
     </AuthProvider>
   );
 }

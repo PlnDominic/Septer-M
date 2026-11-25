@@ -4,11 +4,19 @@ import Link from 'next/link';
 import { formatMoney } from '@/lib/money';
 import { getProduct } from '@/lib/products';
 import { useShop } from '@/components/providers';
+import { useToast } from '@/components/toast';
 import { ProductVisual } from '@/components/product-visual';
 import { CartDelivery } from '@/components/cart-delivery';
 
 export default function CartPage() {
-  const { lines, currency, setQty } = useShop();
+  const { lines, currency, setQty, add } = useShop();
+  const toast = useToast();
+
+  /** Removing is easy to do by accident on a phone, so offer an Undo. */
+  const remove = (slug: string, name: string, qty: number) => {
+    setQty(slug, 0);
+    toast.show(<><strong>{name}</strong> removed from your bag</>, { actions: [{ label: 'Undo', onClick: () => add(slug, qty, { silent: true }), primary: true }], duration: 7000 });
+  };
   const rows = lines.flatMap((l) => {
     const product = getProduct(l.slug);
     return product ? [{ product, qty: l.qty }] : [];
@@ -41,11 +49,11 @@ export default function CartPage() {
                 </div>
                 <div className="flex items-center gap-3 text-sm">
                   <div className="flex items-center rounded-full border border-line bg-card">
-                    <button type="button" className="h-8 w-8" aria-label={`Decrease ${product.name}`} onClick={() => setQty(product.slug, qty - 1)}>−</button>
+                    <button type="button" className="h-10 w-10" aria-label={`Decrease ${product.name}`} onClick={() => (qty <= 1 ? remove(product.slug, product.name, qty) : setQty(product.slug, qty - 1))}>−</button>
                     <span className="w-6 text-center tabular-nums">{qty}</span>
-                    <button type="button" className="h-8 w-8" aria-label={`Increase ${product.name}`} onClick={() => setQty(product.slug, qty + 1)}>+</button>
+                    <button type="button" className="h-10 w-10" aria-label={`Increase ${product.name}`} onClick={() => setQty(product.slug, Math.min(20, qty + 1))}>+</button>
                   </div>
-                  <button type="button" className="text-muted underline" onClick={() => setQty(product.slug, 0)}>Remove</button>
+                  <button type="button" className="px-1 py-2.5 text-muted underline" onClick={() => remove(product.slug, product.name, qty)}>Remove</button>
                 </div>
               </div>
             </li>

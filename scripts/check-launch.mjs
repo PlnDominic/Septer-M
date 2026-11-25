@@ -9,6 +9,7 @@ const checks = [
   ['Registered company name', has('NEXT_PUBLIC_BUSINESS_LEGAL_NAME'), 'NEXT_PUBLIC_BUSINESS_LEGAL_NAME'],
   ['Company number', has('NEXT_PUBLIC_COMPANY_NUMBER'), 'NEXT_PUBLIC_COMPANY_NUMBER'],
   ['Business address', has('NEXT_PUBLIC_BUSINESS_ADDRESS'), 'NEXT_PUBLIC_BUSINESS_ADDRESS'],
+  ['Public site address (sitemap, share previews)', has('NEXT_PUBLIC_SITE_URL') && !/localhost/.test(env.NEXT_PUBLIC_SITE_URL), 'NEXT_PUBLIC_SITE_URL'],
   ['Supabase connected (sign-in)', has('NEXT_PUBLIC_SUPABASE_URL') && has('NEXT_PUBLIC_SUPABASE_ANON_KEY'), 'NEXT_PUBLIC_SUPABASE_URL / _ANON_KEY'],
   ['API configured', has('SUPABASE_SERVICE_ROLE_KEY') && has('SUPABASE_URL'), 'SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY'],
 ];

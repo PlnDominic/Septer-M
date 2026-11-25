@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --test test/delivery.test.mjs"
+    "test": "node --test test/delivery.test.mjs test/search.test.mjs"
   },
   "devDependencies": {
     "typescript": "^5.9.3"

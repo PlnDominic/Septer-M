@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   GH_REGIONS,
   MOMO_NETWORKS,
   checkoutSchema,
+  estimateArrival,
   shippingCost,
   shippingOptions,
   type MomoNetwork,
@@ -15,7 +16,10 @@ import {
 import { getProduct } from '@/lib/products';
 import { formatMoney } from '@/lib/money';
 import { newOrderNumber, saveLastOrder, type Order } from '@/lib/order';
+import { useAuth } from '@/components/auth-provider';
 import { useShop } from '@/components/providers';
+import { formatArrival, useNow } from '@/lib/delivery-format';
+import { RETURN_DAYS } from '@/lib/site';
 import { ProductVisual } from '@/components/product-visual';
 import { Choice, Section, SelectField, TextField } from '@/components/checkout/fields';
 import { LockIcon } from '@/components/icons';
@@ -37,6 +41,56 @@ export default function CheckoutPage() {
   const [momoPhone, setMomoPhone] = useState('');
   const [errors, setErrors] = useState<Errors>({});
   const [placing, setPlacing] = useState(false);
+  const { user, profile, configured } = useAuth();
+  const now = useNow();
+  const [draftLoaded, setDraftLoaded] = useState(false);
+  const prefilledEmail = useRef(false);
+  const prefilledName = useRef(false);
+
+  // Bring back a half-finished form after a reload (this tab only; payment details are never saved).
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('sm.checkoutDraft');
+      if (raw) {
+        const d = JSON.parse(raw) as { email?: string; uk?: Partial<typeof emptyUk>; gh?: Partial<typeof emptyGh>; shippingId?: string };
+        setEmail(d.email ?? '');
+        setUk({ ...emptyUk, ...d.uk });
+        setGh({ ...emptyGh, ...d.gh });
+        if (d.shippingId) setShippingId(d.shippingId);
+      }
+    } catch {
+      /* ignore a corrupt draft */
+    }
+    setDraftLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!draftLoaded) return;
+    try {
+      sessionStorage.setItem('sm.checkoutDraft', JSON.stringify({ email, uk, gh, shippingId }));
+    } catch {
+      /* storage unavailable */
+    }
+  }, [draftLoaded, email, uk, gh, shippingId]);
+
+  // Signed-in customers don't retype what we already know.
+  useEffect(() => {
+    if (!draftLoaded || !user) return;
+    if (!prefilledEmail.current) {
+      prefilledEmail.current = true;
+      setEmail((e) => e || user.email || '');
+    }
+    const meta = user.user_metadata as { full_name?: string; name?: string } | undefined;
+    const full = profile?.fullName ?? meta?.full_name ?? meta?.name ?? '';
+    if (!prefilledName.current && (profile || full)) {
+      prefilledName.current = true;
+      const [first, ...rest] = full.trim().split(/\s+/);
+      if (first) {
+        setUk((u) => ({ ...u, firstName: u.firstName || first, lastName: u.lastName || rest.join(' ') }));
+        setGh((g) => ({ ...g, firstName: g.firstName || first, lastName: g.lastName || rest.join(' ') }));
+      }
+    }
+  }, [draftLoaded, user, profile]);
 
   const rows = lines.flatMap((l) => {
     const product = getProduct(l.slug);
@@ -118,14 +172,63 @@ export default function CheckoutPage() {
     };
     setPlacing(true);
     saveLastOrder(order);
+    try {
+      sessionStorage.removeItem('sm.checkoutDraft');
+    } catch {
+      /* nothing to clear */
+    }
     clear();
     router.push('/checkout/confirmation');
   };
 
+  const summaryBody = (
+    <>
+      <ul className="space-y-4">
+        {rows.map(({ product, qty }) => (
+          <li key={product.slug} className="flex items-center gap-3">
+            <div className="relative w-14 shrink-0">
+              <ProductVisual product={product} square sizes="56px" className="!rounded-lg" />
+              <span className="absolute -top-2 -right-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-ink px-1 text-[11px] text-white">{qty}</span>
+            </div>
+            <span className="flex-1 text-sm">{product.name}</span>
+            <span className="text-sm">{money(product.price[currency] * qty)}</span>
+          </li>
+        ))}
+      </ul>
+      <dl className="space-y-2 border-t border-line pt-4 text-sm">
+        <div className="flex justify-between"><dt>Subtotal</dt><dd>{money(subtotal)}</dd></div>
+        <div className="flex justify-between">
+          <dt>Delivery</dt>
+          <dd>{region === 'GH' && !gh.region ? 'Choose your region' : delivery === 0 ? 'Free' : money(delivery)}</dd>
+        </div>
+        <div className="flex justify-between border-t border-line pt-3 text-base font-semibold"><dt>Total</dt><dd>{money(total)}</dd></div>
+      </dl>
+    </>
+  );
+
   return (
-    <div className="py-10">
+    <div className="pt-8 pb-28 lg:py-10">
       <h1 className="text-3xl sm:text-4xl">Checkout</h1>
-      <form onSubmit={submit} noValidate className="mt-8 grid gap-8 lg:grid-cols-[1fr_380px]">
+      {user ? (
+        <p className="mt-2 text-sm text-muted">Signed in as {user.email}</p>
+      ) : (
+        configured && (
+          <p className="mt-2 text-sm text-muted">
+            Have an account? <Link href="/account?next=/checkout" className="underline">Sign in</Link> to fill in your details, or continue as a guest.
+          </p>
+        )
+      )}
+
+      {/* Phones: the order and its total sit at the top, collapsed by default. */}
+      <details className="mt-6 rounded-2xl border border-line lg:hidden">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3.5 text-sm font-medium [&::-webkit-details-marker]:hidden">
+          <span>Order summary ({rows.reduce((n, r) => n + r.qty, 0)} {rows.reduce((n, r) => n + r.qty, 0) === 1 ? 'item' : 'items'})</span>
+          <span>{money(total)}</span>
+        </summary>
+        <div className="space-y-5 border-t border-line p-4">{summaryBody}</div>
+      </details>
+
+      <form id="checkout-form" onSubmit={submit} noValidate className="mt-6 grid gap-8 lg:mt-8 lg:grid-cols-[1fr_380px]">
         <div className="space-y-6">
           <Section step={1} title="Contact">
             <TextField
@@ -206,7 +309,7 @@ export default function CheckoutPage() {
                       checked={shipping.id === o.id}
                       onChange={() => setShippingId(o.id)}
                       title={o.label}
-                      detail={o.detail}
+                      detail={now ? `${o.detail} · arrives ${formatArrival(estimateArrival(now, o.minDays, o.maxDays))}` : o.detail}
                       aside={cost === 0 ? 'Free' : money(cost)}
                     />
                   );
@@ -246,30 +349,16 @@ export default function CheckoutPage() {
               </div>
             )}
           </Section>
+
+          <p className="text-xs text-muted">
+            By placing your order you agree to our <Link href="/terms" className="underline">Terms &amp; conditions</Link> and <Link href="/privacy" className="underline">Privacy policy</Link>, and
+            to our {RETURN_DAYS}-day <Link href="/returns" className="underline">returns policy</Link>.
+          </p>
         </div>
 
-        <aside className="h-fit space-y-5 rounded-2xl border border-line p-5 sm:p-6 lg:sticky lg:top-24">
+        <aside className="hidden h-fit space-y-5 rounded-2xl border border-line p-5 sm:p-6 lg:sticky lg:top-24 lg:block">
           <h2 className="text-lg">Order summary</h2>
-          <ul className="space-y-4">
-            {rows.map(({ product, qty }) => (
-              <li key={product.slug} className="flex items-center gap-3">
-                <div className="relative w-14 shrink-0">
-                  <ProductVisual product={product} square sizes="56px" className="!rounded-lg" />
-                  <span className="absolute -top-2 -right-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-ink px-1 text-[11px] text-white">{qty}</span>
-                </div>
-                <span className="flex-1 text-sm">{product.name}</span>
-                <span className="text-sm">{money(product.price[currency] * qty)}</span>
-              </li>
-            ))}
-          </ul>
-          <dl className="space-y-2 border-t border-line pt-4 text-sm">
-            <div className="flex justify-between"><dt>Subtotal</dt><dd>{money(subtotal)}</dd></div>
-            <div className="flex justify-between">
-              <dt>Delivery</dt>
-              <dd>{region === 'GH' && !gh.region ? '—' : delivery === 0 ? 'Free' : money(delivery)}</dd>
-            </div>
-            <div className="flex justify-between border-t border-line pt-3 text-base font-semibold"><dt>Total</dt><dd>{money(total)}</dd></div>
-          </dl>
+          {summaryBody}
           <p className="text-xs text-muted">Prices include VAT where applicable.</p>
           <button type="submit" className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-ink font-medium text-white transition hover:bg-brand hover:text-ink">
             <LockIcon width={18} height={18} /> Place order · {money(total)}
@@ -277,6 +366,17 @@ export default function CheckoutPage() {
           <Link href="/cart" className="block text-center text-sm text-muted underline">Back to bag</Link>
         </aside>
       </form>
+
+      {/* Phones: the total and the Place order button stay on screen while you fill in the form. */}
+      <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t border-line bg-white px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-6px_20px_rgba(0,0,0,0.08)] lg:hidden">
+        <div className="min-w-0">
+          <p className="text-xs text-muted">Total</p>
+          <p className="text-lg leading-tight font-semibold">{money(total)}</p>
+        </div>
+        <button type="submit" form="checkout-form" className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-ink font-medium text-white transition active:bg-brand active:text-ink">
+          <LockIcon width={18} height={18} /> Place order
+        </button>
+      </div>
     </div>
   );
 }

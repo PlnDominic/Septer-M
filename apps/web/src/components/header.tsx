@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import type { Region } from '@septer-m/shared';
 import { CATEGORIES } from '@/lib/products';
 import { NAV, NAV_AFTER } from '@/lib/site';
 import { useAuth } from './auth-provider';
 import { useShop } from './providers';
+import { SearchBox } from './search-box';
 import { BagIcon, ChevronIcon, CloseIcon, HeartIcon, MenuIcon, SearchIcon, UserIcon } from './icons';
 
 const Badge = ({ n }: { n: number }) =>
@@ -20,30 +21,22 @@ export function Header() {
   const { region, setRegion, count, wishlist } = useShop();
   const { user } = useAuth();
   const pathname = usePathname();
-  const router = useRouter();
   const [menu, setMenu] = useState(false);
   const [searching, setSearching] = useState(false);
-  const [q, setQ] = useState('');
 
   const link = (href: string) =>
     `py-1 text-sm transition hover:text-brand-dark ${href === pathname ? 'border-b-2 border-brand' : 'border-b-2 border-transparent'}`;
   const icon = 'relative flex h-10 w-10 items-center justify-center rounded-full hover:bg-black/5';
 
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    if (q.trim()) router.push(`/shop?q=${encodeURIComponent(q.trim())}`);
-    setSearching(false);
-    setMenu(false);
-  };
-
   return (
+    <>
     <header className="sticky top-0 z-20 border-b border-line bg-paper/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
         <div className="flex items-center gap-2">
           <button type="button" className={`${icon} md:hidden`} aria-label={menu ? 'Close menu' : 'Open menu'} aria-expanded={menu} onClick={() => setMenu((m) => !m)}>
             {menu ? <CloseIcon /> : <MenuIcon />}
           </button>
-          <Link href="/" aria-label="Septer-M home" className="shrink-0">
+          <Link href="/" aria-label="Septer-M home" className="shrink-0 py-2">
             <Image src="/brand/wordmark.png" alt="Septer-M" width={1144} height={236} priority className="h-6 w-auto sm:h-7" />
           </Link>
         </div>
@@ -64,7 +57,7 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-0.5">
-          <button type="button" className={icon} aria-label="Search" aria-expanded={searching} onClick={() => setSearching((s) => !s)}><SearchIcon /></button>
+          <button type="button" className={`${icon} hidden md:flex`} aria-label="Search" aria-expanded={searching} onClick={() => setSearching((s) => !s)}><SearchIcon /></button>
           <Link href="/wishlist" className={`${icon} hidden sm:flex`} aria-label={`Wishlist (${wishlist.length})`}><HeartIcon /><Badge n={wishlist.length} /></Link>
           <Link href="/account" className={`${icon} hidden sm:flex`} aria-label={user ? 'Account (signed in)' : 'Account'}>
             <UserIcon />
@@ -73,7 +66,7 @@ export function Header() {
           <Link href="/cart" className={icon} aria-label={`Bag (${count})`}><BagIcon /><Badge n={count} /></Link>
           <label className="ml-1">
             <span className="sr-only">Region</span>
-            <select value={region} onChange={(e) => setRegion(e.target.value as Region)} className="rounded-md border border-line bg-card px-1.5 py-1 text-xs sm:text-sm">
+            <select value={region} onChange={(e) => setRegion(e.target.value as Region)} className="h-10 rounded-md border border-line bg-card px-1.5 text-xs sm:text-sm">
               <option value="UK">UK · £</option>
               <option value="GH">GH · GH₵</option>
             </select>
@@ -82,13 +75,11 @@ export function Header() {
       </div>
 
       {searching && (
-        <form onSubmit={submit} role="search" className="border-t border-line">
-          <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
-            <SearchIcon />
-            <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search serums, cleansers, ingredients…" className="h-9 flex-1 bg-transparent outline-none" />
-            <button className="rounded-full bg-ink px-5 py-1.5 text-sm text-white hover:bg-brand hover:text-ink">Search</button>
+        <div className="hidden border-t border-line md:block">
+          <div className="mx-auto max-w-6xl px-4 py-3">
+            <SearchBox autoFocus onDone={() => setSearching(false)} className="mx-auto max-w-xl" />
           </div>
-        </form>
+        </div>
       )}
 
       {menu && (
@@ -101,5 +92,10 @@ export function Header() {
         </nav>
       )}
     </header>
+    {/* Phones: search is always visible (not sticky, so it scrolls away and frees the screen). */}
+    <div className="border-b border-line bg-paper px-4 py-2 md:hidden">
+      <SearchBox />
+    </div>
+    </>
   );
 }

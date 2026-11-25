@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { concernCounts } from '@septer-m/shared';
 import { CATEGORIES, PRODUCTS } from '@/lib/products';
 import { ProductCard } from '@/components/product-card';
 import { ProductVisual } from '@/components/product-visual';
@@ -13,7 +14,7 @@ import { ArrowIcon } from '@/components/icons';
 const SectionHead = ({ title, href }: { title: string; href: string }) => (
   <div className="mb-6 flex items-end justify-between">
     <h2 className="font-display text-2xl sm:text-3xl">{title}</h2>
-    <Link href={href} className="flex items-center gap-1 text-sm text-muted hover:text-ink">View all <ArrowIcon /></Link>
+    <Link href={href} className="flex items-center gap-1 py-2.5 text-sm text-muted hover:text-ink">View all <ArrowIcon /></Link>
   </div>
 );
 
@@ -42,7 +43,7 @@ export default function Home() {
             <p className="mt-3 max-w-md text-white/85">A short list of well-made essentials, designed to work together and delivered to the UK and Ghana.</p>
             <div className="mt-5 flex flex-wrap gap-3">
               <Link href="/shop" className="inline-flex items-center gap-2 rounded-lg bg-brand px-6 py-2.5 font-semibold text-ink transition hover:bg-white">Shop now <ArrowIcon /></Link>
-              <Link href="/shop?collection=best" className="rounded-lg border border-white/70 px-6 py-2.5 font-medium text-white transition hover:bg-white hover:text-ink">Best sellers</Link>
+              <Link href="/shop?collection=best" className="rounded-lg border border-white bg-white/15 px-6 py-2.5 font-medium text-white backdrop-blur-sm transition hover:bg-white hover:text-ink">Best sellers</Link>
             </div>
           </div>
         </div>
@@ -64,6 +65,24 @@ export default function Home() {
             );
           })}
         </div>
+      </section>
+
+      {/* Shop by concern: how most people think about skincare */}
+      <section className="pt-14">
+        <h2 className="mb-6 font-display text-2xl sm:text-3xl">Shop by skin concern</h2>
+        <ul className="flex flex-wrap gap-3">
+          {concernCounts(PRODUCTS).slice(0, 8).map((c) => (
+            <li key={c.concern}>
+              <Link
+                href={`/shop?concern=${encodeURIComponent(c.concern)}`}
+                className="inline-flex h-12 items-center gap-2 rounded-full border border-line bg-card px-5 text-sm font-medium transition hover:border-brand hover:bg-brand/10"
+              >
+                {c.concern}
+                <span className="text-xs font-normal text-muted">{c.count}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
       </section>
 
       {/* New arrivals */}

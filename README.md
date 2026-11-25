@@ -103,6 +103,8 @@ Run `pnpm check:launch` for a live checklist of what is still missing. The store
 
 The Delivery, Returns, Privacy and Terms pages are good-faith drafts written from how the shop currently works. Their delivery prices, times and free-delivery thresholds come from the same code as checkout (`packages/shared/src/checkout.ts`), so they cannot disagree. Have a solicitor read the policy wording before you launch, and update `LEGAL_UPDATED` in `apps/web/src/lib/site.ts` when you change it.
 
+Set `NEXT_PUBLIC_SITE_URL` to your real address so the sitemap, share previews (WhatsApp, Instagram) and Google product data point at the right place. Search engines are told to skip `/admin`, `/checkout`, `/account`, `/cart` and `/wishlist`.
+
 Ratings are hidden until real reviews exist (`rating.count` is 0 for every product). Do not add placeholder ratings or reviews: fake reviews are illegal in the UK.
 
 ## Deploying to Vercel
