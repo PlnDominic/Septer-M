@@ -304,6 +304,13 @@ describe('admin functions', () => {
     assert.ok(ghs.revenue < d.revenue * 1000); // currencies are reported separately, never summed
   });
 
+  test('admin_order_counts tallies orders by status', async () => {
+    const c = (await one('select public.admin_order_counts() as c')).c;
+    const total = Object.values(c).reduce((a, b) => a + b, 0);
+    assert.equal(total, (await one('select count(*)::int n from public.orders')).n);
+    assert.ok(c.pending_payment >= 1);
+  });
+
   test('admin_customers groups orders by email with per-currency spend', async () => {
     const c = (await one('select public.admin_customers() as c')).c;
     const ada = c.find((x) => x.email === 'ada@example.com');
@@ -377,6 +384,7 @@ describe('security (RLS and privileges)', () => {
     const calls = [
       `select public.release_expired_orders()`,
       `select public.admin_customers()`,
+      `select public.admin_order_counts()`,
       `select public.admin_dashboard('GBP', 7)`,
       `select public.set_order_status('SM-1001', 'paid', null, null)`,
       `select public.mark_order_paid('SM-1001', 'manual', 'x', 1, 'GBP', null)`,

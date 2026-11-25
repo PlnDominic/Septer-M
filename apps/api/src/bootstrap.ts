@@ -1,16 +1,14 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
-import type { NestExpressApplication } from '@nestjs/platform-express';
+import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { AppModule } from './app.module';
 
 /** Shared by the local server (main.ts) and the Vercel function (api/index.ts). */
-export async function createApp(): Promise<NestExpressApplication> {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+export async function createApp(): Promise<NestFastifyApplication> {
+  const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter(), {
     // Payment webhooks verify signatures against the raw body.
     rawBody: true,
   });
   app.setGlobalPrefix('v1');
-  app.enableCors({ origin: process.env.WEB_ORIGIN?.split(',') ?? true });
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  app.enableCors({ origin: process.env.WEB_ORIGIN?.split(',').map((o) => o.trim()) ?? true });
   return app;
 }

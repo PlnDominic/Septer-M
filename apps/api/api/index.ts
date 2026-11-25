@@ -1,18 +1,20 @@
 import type { IncomingMessage, ServerResponse } from 'http';
 import { createApp } from '../src/bootstrap';
 
-type Handler = (req: IncomingMessage, res: ServerResponse) => void;
+type Server = { emit(event: 'request', req: IncomingMessage, res: ServerResponse): void };
 
 // Cache the initialised app across warm invocations.
-let handler: Promise<Handler> | undefined;
+let server: Promise<Server> | undefined;
 
-async function init(): Promise<Handler> {
+async function init(): Promise<Server> {
   const app = await createApp();
   await app.init();
-  return app.getHttpAdapter().getInstance();
+  const fastify = app.getHttpAdapter().getInstance();
+  await fastify.ready();
+  return fastify.server as Server;
 }
 
 export default async function (req: IncomingMessage, res: ServerResponse) {
-  handler ??= init();
-  return (await handler)(req, res);
+  server ??= init();
+  (await server).emit('request', req, res);
 }

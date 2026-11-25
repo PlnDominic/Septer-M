@@ -390,6 +390,12 @@ language sql stable security definer set search_path = '' as $$
   ) x;
 $$;
 
+create function public.admin_order_counts() returns jsonb
+language sql stable security definer set search_path = '' as $$
+  select coalesce(jsonb_object_agg(status, n), '{}'::jsonb)
+  from (select status::text as status, count(*)::int as n from public.orders group by status) t;
+$$;
+
 /* ---------- Lock the API-only functions down to the service role ---------- */
 
 revoke all on function public.create_order(uuid, text, public.region_code, jsonb, text, text, text, int, jsonb, jsonb, int, int)
@@ -402,6 +408,7 @@ revoke all on function public.release_expired_orders() from public, anon, authen
 revoke all on function public.admin_upsert_product(jsonb, text) from public, anon, authenticated;
 revoke all on function public.admin_dashboard(public.currency_code, int) from public, anon, authenticated;
 revoke all on function public.admin_customers() from public, anon, authenticated;
+revoke all on function public.admin_order_counts() from public, anon, authenticated;
 
 grant execute on function public.create_order(uuid, text, public.region_code, jsonb, text, text, text, int, jsonb, jsonb, int, int) to service_role;
 grant execute on function public.set_order_status(text, public.order_status, text, uuid) to service_role;
@@ -410,3 +417,4 @@ grant execute on function public.release_expired_orders() to service_role;
 grant execute on function public.admin_upsert_product(jsonb, text) to service_role;
 grant execute on function public.admin_dashboard(public.currency_code, int) to service_role;
 grant execute on function public.admin_customers() to service_role;
+grant execute on function public.admin_order_counts() to service_role;

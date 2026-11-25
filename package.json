@@ -11,9 +11,15 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r --if-present test",
-    "test:db": "node --test supabase/tests/db.test.mjs"
+    "test:db": "node --test supabase/tests/db.test.mjs",
+    "db:bundle": "sh -c '{ echo \"-- Septer-M database setup: schema + security rules + order functions + starter catalogue.\"; echo \"-- Paste this whole file into Supabase > SQL Editor and click Run. Run it once on an empty project.\"; echo \"-- Generated from supabase/migrations/* and supabase/seed.sql (pnpm db:bundle). Do not edit by hand.\"; echo; for f in supabase/migrations/*.sql supabase/seed.sql; do echo \"-- ===================== $(basename $f) ====================\"; cat $f; echo; done; } > supabase/setup.sql'"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.6.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "multer": ">=2.5.0"
+    }
   }
 }

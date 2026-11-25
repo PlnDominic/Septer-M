@@ -113,3 +113,18 @@ export type CheckoutInput = z.input<typeof checkoutSchema>;
 export type CheckoutData = z.output<typeof checkoutSchema>;
 export type UkAddress = z.output<typeof ukAddressSchema>;
 export type GhAddress = z.output<typeof ghAddressSchema>;
+
+/* ---------- Order placement (storefront -> API) ---------- */
+
+export const cartLineSchema = z.object({
+  slug: z.string().min(1).max(120),
+  qty: z.number().int().min(1, 'Quantity must be at least 1').max(20, 'Maximum 20 of one product per order'),
+});
+
+export const placeOrderSchema = z.object({
+  items: z.array(cartLineSchema).min(1, 'Your bag is empty').max(30),
+  checkout: checkoutSchema,
+});
+
+export type PlaceOrderInput = z.input<typeof placeOrderSchema>;
+export type PlaceOrderData = z.output<typeof placeOrderSchema>;
