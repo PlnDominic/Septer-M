@@ -30,7 +30,7 @@ describe('toProductDto', () => {
       slug: 'vit-c', name: 'Vitamin C Serum', tagline: 'Brighter', category: 'serum', sizeMl: 30,
       price: { GBP: 2800, GHS: 36000 }, skinTypes: ['Dull'], concerns: ['Dark spots'], ingredients: 'Aqua, Niacinamide',
       howToUse: 'Morning', image: '/images/products/vit-c.jpg', isNew: true, bestSeller: false,
-      rating: { value: 4.7, count: 94 }, inStock: true,
+      rating: { value: 4.7, count: 94 }, inStock: true, lowStock: 5,
     });
   });
 
@@ -43,6 +43,12 @@ describe('toProductDto', () => {
 
   it('reports out of stock', () => {
     expect(toProductDto(row({ stock: 0 })).inStock).toBe(false);
+    expect(toProductDto(row({ stock: 0 })).lowStock).toBeNull();
+  });
+
+  it('flags "only N left" at 1-5 units and never exposes larger counts', () => {
+    for (const n of [1, 3, 5]) expect(toProductDto(row({ stock: n })).lowStock).toBe(n);
+    for (const n of [6, 42]) expect(toProductDto(row({ stock: n })).lowStock).toBeNull();
   });
 
   it('includes compareAt only when both currencies have one', () => {

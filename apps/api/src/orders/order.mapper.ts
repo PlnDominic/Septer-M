@@ -13,7 +13,10 @@ export interface OrderRow {
   shipping_detail: string;
   shipping_cost: number;
   subtotal: number;
+  discount: number;
+  discount_code: string | null;
   total: number;
+  public_token?: string;
   payment: Record<string, unknown>;
   expires_at: string | null;
   created_at: string;
@@ -37,6 +40,8 @@ export function toOrderDto(row: OrderRow) {
     shipping: { id: row.shipping_method_id, label: row.shipping_label, detail: row.shipping_detail, cost: row.shipping_cost },
     lines: (row.items ?? []).map((i) => ({ slug: i.slug, name: i.name, qty: i.qty, unitPrice: i.unit_price })),
     subtotal: row.subtotal,
+    discount: row.discount ?? 0,
+    discountCode: row.discount_code ?? undefined,
     total: row.total,
     expiresAt: row.expires_at,
     createdAt: row.created_at,

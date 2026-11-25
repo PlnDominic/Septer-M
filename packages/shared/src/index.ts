@@ -22,3 +22,4 @@ export * from './checkout';
 export * from './admin';
 export * from './delivery';
 export * from './search';
+export * from './commerce';

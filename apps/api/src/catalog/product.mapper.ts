@@ -47,12 +47,17 @@ export interface ProductDto {
   bestSeller: boolean;
   rating: { value: number; count: number };
   inStock: boolean;
+  /** Units left when running low (1-5), otherwise null. Exact stock is never exposed publicly. */
+  lowStock: number | null;
 }
 
 export interface AdminProductDto extends ProductDto {
   status: 'draft' | 'active';
   stock: number;
 }
+
+/** Shoppers see "only N left" at or below this many units. */
+export const LOW_STOCK_THRESHOLD = 5;
 
 const categorySlug = (c: ProductRow['category']) => (Array.isArray(c) ? c[0]?.slug : c?.slug) ?? '';
 
@@ -80,6 +85,7 @@ export function toProductDto(row: ProductRow): ProductDto {
     bestSeller: row.best_seller,
     rating: { value: Number(row.rating_value), count: row.rating_count },
     inStock: row.stock > 0,
+    lowStock: row.stock > 0 && row.stock <= LOW_STOCK_THRESHOLD ? row.stock : null,
   };
 }
 

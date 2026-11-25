@@ -1,4 +1,4 @@
-import { ConflictException, HttpException, InternalServerErrorException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, HttpException, InternalServerErrorException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 
 interface DbError {
   message: string;
@@ -35,6 +35,16 @@ export function toHttpError(error: DbError): HttpException {
       return new NotFoundException(body('ORDER_NOT_FOUND', 'Order not found.'));
     case 'PRODUCT_NOT_FOUND':
       return new NotFoundException(body('PRODUCT_NOT_FOUND', 'Product not found.'));
+    case 'REVIEW_NOT_FOUND':
+      return new NotFoundException(body('REVIEW_NOT_FOUND', 'Review not found.'));
+    case 'DISCOUNT_INVALID':
+      return new UnprocessableEntityException(body('PROMO_INVALID', 'That promo code can’t be used.'));
+    case 'INVALID_EMAIL':
+      return new UnprocessableEntityException(body('INVALID_EMAIL', 'Enter a valid email address.'));
+    case 'NOT_PURCHASED':
+      return new ForbiddenException(body('NOT_PURCHASED', 'Only customers who received this product can review it.'));
+    case 'ALREADY_REVIEWED':
+      return new ConflictException(body('ALREADY_REVIEWED', 'You have already reviewed this product.'));
   }
   if (error.code === '23505') return new ConflictException(body('DUPLICATE', 'That already exists.'));
   if (error.code === '23503') return new ConflictException(body('IN_USE', 'That is still in use.'));

@@ -127,9 +127,12 @@ export const cartLineSchema = z.object({
   qty: z.number().int().min(1, 'Quantity must be at least 1').max(20, 'Maximum 20 of one product per order'),
 });
 
+export const promoCodeSchema = z.string().trim().min(3, 'Enter a code').max(32, 'That code is too long');
+
 export const placeOrderSchema = z.object({
   items: z.array(cartLineSchema).min(1, 'Your bag is empty').max(30),
   checkout: checkoutSchema,
+  promoCode: promoCodeSchema.optional(),
 });
 
 export type PlaceOrderInput = z.input<typeof placeOrderSchema>;

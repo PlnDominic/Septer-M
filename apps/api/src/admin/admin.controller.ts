@@ -1,8 +1,11 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { z } from 'zod';
 import {
+  adminDiscountSchema,
   adminProductSchema,
   ORDER_STATUSES,
+  REVIEW_STATUSES,
+  reviewStatusSchema,
   setOrderStatusSchema,
   type AdminProductData,
 } from '@septer-m/shared';
@@ -62,6 +65,35 @@ export class AdminController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.admin.setOrderStatus(number, body.status, body.note, user.id);
+  }
+
+  /* ---- Promo codes ---- */
+
+  @Get('discounts')
+  discounts() {
+    return this.admin.listDiscounts();
+  }
+
+  @Post('discounts')
+  createDiscount(@Body(new ZodPipe(adminDiscountSchema)) body: z.output<typeof adminDiscountSchema>) {
+    return this.admin.createDiscount(body);
+  }
+
+  @Post('discounts/:id/active')
+  setDiscountActive(@Param('id') id: string, @Body(new ZodPipe(z.object({ active: z.boolean() }))) body: { active: boolean }) {
+    return this.admin.setDiscountActive(id, body.active);
+  }
+
+  /* ---- Reviews ---- */
+
+  @Get('reviews')
+  reviews(@Query(new ZodPipe(z.object({ status: z.enum(REVIEW_STATUSES).default('pending') }))) q: { status: (typeof REVIEW_STATUSES)[number] }) {
+    return this.admin.listReviews(q.status);
+  }
+
+  @Post('reviews/:id/status')
+  moderateReview(@Param('id') id: string, @Body(new ZodPipe(reviewStatusSchema)) body: z.output<typeof reviewStatusSchema>) {
+    return this.admin.moderateReview(id, body.status);
   }
 
   /* ---- Products ---- */
