@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { REGION_CURRENCY, type Currency, type Region } from '@septer-m/shared';
+import { AuthProvider } from './auth-provider';
 
 interface CartLine {
   slug: string;
@@ -102,7 +103,11 @@ export function Providers({ children }: { children: ReactNode }) {
     [ready, region, setRegion, lines, add, setQty, clear, wishlist, toggleWish],
   );
 
-  return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>;
+  return (
+    <AuthProvider>
+      <ShopContext.Provider value={value}>{children}</ShopContext.Provider>
+    </AuthProvider>
+  );
 }
 
 export function useShop(): ShopState {

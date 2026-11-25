@@ -7,6 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import type { Region } from '@septer-m/shared';
 import { CATEGORIES } from '@/lib/products';
 import { NAV, NAV_AFTER } from '@/lib/site';
+import { useAuth } from './auth-provider';
 import { useShop } from './providers';
 import { BagIcon, ChevronIcon, CloseIcon, HeartIcon, MenuIcon, SearchIcon, UserIcon } from './icons';
 
@@ -17,6 +18,7 @@ const Badge = ({ n }: { n: number }) =>
 
 export function Header() {
   const { region, setRegion, count, wishlist } = useShop();
+  const { user } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [menu, setMenu] = useState(false);
@@ -64,7 +66,10 @@ export function Header() {
         <div className="flex items-center gap-0.5">
           <button type="button" className={icon} aria-label="Search" aria-expanded={searching} onClick={() => setSearching((s) => !s)}><SearchIcon /></button>
           <Link href="/wishlist" className={`${icon} hidden sm:flex`} aria-label={`Wishlist (${wishlist.length})`}><HeartIcon /><Badge n={wishlist.length} /></Link>
-          <Link href="/account" className={`${icon} hidden sm:flex`} aria-label="Account"><UserIcon /></Link>
+          <Link href="/account" className={`${icon} hidden sm:flex`} aria-label={user ? 'Account (signed in)' : 'Account'}>
+            <UserIcon />
+            {user && <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-brand ring-2 ring-paper" aria-hidden />}
+          </Link>
           <Link href="/cart" className={icon} aria-label={`Bag (${count})`}><BagIcon /><Badge n={count} /></Link>
           <label className="ml-1">
             <span className="sr-only">Region</span>

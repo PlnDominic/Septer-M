@@ -63,6 +63,22 @@ After editing a migration, run `pnpm db:bundle` to regenerate `setup.sql` and `p
 
 Run the API locally with `pnpm dev:api`. `pnpm test` runs the API tests; `pnpm test:db` runs the database tests.
 
+**Customer sign-in.** The account page signs customers in with Supabase Auth (email + password, with sign-up, email confirmation and password reset). It talks to Supabase directly from the browser using the public anon key, so it only works once these are set for the web app:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=...        # Project Settings > API > Project URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...   # Project Settings > API > anon / publishable key
+```
+
+Then in Supabase **Authentication > URL Configuration**, set **Site URL** to your site address and add these **Redirect URLs** (use your real domain, and `http://localhost:3000` for local work):
+
+```
+https://YOUR-DOMAIN/account
+https://YOUR-DOMAIN/account/reset
+```
+
+Without the two variables the page shows a clear "sign-in isn't switched on yet" notice instead of a form. Customers can see only their own orders (Row Level Security), and an account becomes an admin only when you set `role = 'admin'` on its `profiles` row. The admin pages are not yet locked behind sign-in.
+
 ## Deploying to Vercel
 
 One Vercel project, rooted at `apps/web` (Framework: Next.js).
