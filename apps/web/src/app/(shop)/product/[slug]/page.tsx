@@ -5,6 +5,7 @@ import { ProductVisual } from '@/components/product-visual';
 import { PurchasePanel } from '@/components/purchase-panel';
 import { DeliveryInfo } from '@/components/delivery-info';
 import { ProductCard } from '@/components/product-card';
+import { Reviews } from '@/components/reviews';
 import { SITE_URL } from '@/lib/site-url';
 
 export function generateStaticParams() {
@@ -84,6 +85,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           </dl>
         </div>
       </div>
+
+      <Reviews slug={product.slug} productName={product.name} />
 
       {related.length > 0 && (
         <section className="mt-20">

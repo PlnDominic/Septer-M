@@ -10,7 +10,9 @@ import { useShop } from './providers';
  * price and an Add to bag button stays pinned to the bottom of the screen.
  */
 export function PurchasePanel({ product }: { product: Product }) {
-  const { add } = useShop();
+  const { add, stockOf } = useShop();
+  const { soldOut, low } = stockOf(product.slug);
+  const max = low ?? 20;
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const [mainVisible, setMainVisible] = useState(true);
@@ -34,7 +36,8 @@ export function PurchasePanel({ product }: { product: Product }) {
   }, [mainVisible]);
 
   const addToBag = () => {
-    add(product.slug, qty);
+    if (soldOut) return;
+    add(product.slug, Math.min(qty, max));
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);
   };
@@ -45,13 +48,15 @@ export function PurchasePanel({ product }: { product: Product }) {
       <div ref={mainRef} className="flex max-w-sm items-center gap-3">
         <div className="flex items-center rounded-full border border-line bg-card">
           <button type="button" className="h-11 w-11 text-lg" aria-label="Decrease quantity" onClick={() => setQty((q) => Math.max(1, q - 1))}>−</button>
-          <span className="w-8 text-center tabular-nums" aria-live="polite">{qty}</span>
-          <button type="button" className="h-11 w-11 text-lg" aria-label="Increase quantity" onClick={() => setQty((q) => Math.min(20, q + 1))}>+</button>
+          <span className="w-8 text-center tabular-nums" aria-live="polite">{Math.min(qty, max)}</span>
+          <button type="button" className="h-11 w-11 text-lg" aria-label="Increase quantity" onClick={() => setQty((q) => Math.min(max, q + 1))}>+</button>
         </div>
-        <button type="button" className="h-11 flex-1 rounded-full bg-ink px-6 font-medium text-white transition hover:bg-brand hover:text-ink" onClick={addToBag}>
-          {label}
+        <button type="button" disabled={soldOut} className="h-11 flex-1 rounded-full bg-ink px-6 font-medium text-white transition hover:bg-brand hover:text-ink disabled:cursor-not-allowed disabled:bg-line disabled:text-muted disabled:hover:bg-line" onClick={addToBag}>
+          {soldOut ? 'Sold out' : label}
         </button>
       </div>
+      {low !== null && !soldOut && <p data-testid="low-stock" className="mt-2 text-sm font-medium text-brand-dark">Only {low} left in stock</p>}
+      {soldOut && <p data-testid="sold-out" className="mt-2 text-sm text-muted">This product is currently sold out.</p>}
 
       {!mainVisible && (
         <div
@@ -62,8 +67,8 @@ export function PurchasePanel({ product }: { product: Product }) {
             <p className="truncate text-sm font-medium">{product.name}</p>
             <Price product={product} className="text-sm" />
           </div>
-          <button type="button" className="h-11 shrink-0 rounded-full bg-ink px-6 font-medium text-white transition active:bg-brand active:text-ink" onClick={addToBag}>
-            {label}
+          <button type="button" disabled={soldOut} className="h-11 shrink-0 rounded-full bg-ink px-6 font-medium text-white transition active:bg-brand active:text-ink disabled:bg-line disabled:text-muted" onClick={addToBag}>
+            {soldOut ? 'Sold out' : label}
           </button>
         </div>
       )}

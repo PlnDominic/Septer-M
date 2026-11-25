@@ -1,11 +1,13 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { CATEGORIES } from '@/lib/products';
+import { NewsletterForm } from './newsletter-form';
 import { BUSINESS, registeredLine, whatsappUrl } from '@/lib/business';
 
 const HELP = [
   { href: '/shipping', label: 'Delivery' },
   { href: '/returns', label: 'Returns & refunds' },
+  { href: '/track', label: 'Track an order' },
   { href: '/faq', label: 'FAQ' },
   { href: '/contact', label: 'Contact us' },
 ];
@@ -61,6 +63,8 @@ export function Footer() {
           </ul>
         </nav>
       </div>
+
+      <NewsletterForm />
 
       <div className="border-t border-white/15">
         <div className="mx-auto max-w-6xl px-4 py-6">

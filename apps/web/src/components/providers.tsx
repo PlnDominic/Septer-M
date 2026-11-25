@@ -5,6 +5,7 @@ import { REGION_CURRENCY, type Currency, type Region } from '@septer-m/shared';
 import { AuthProvider } from './auth-provider';
 import { ToastProvider, useToast } from './toast';
 import { getProduct } from '@/lib/products';
+import { api, apiEnabled } from '@/lib/api';
 
 interface CartLine {
   slug: string;
@@ -25,6 +26,8 @@ interface ShopState {
   clear: () => void;
   wishlist: string[];
   toggleWish: (slug: string) => void;
+  /** Live stock from the shop. Unknown (demo mode, or still loading) counts as available. */
+  stockOf: (slug: string) => { soldOut: boolean; low: number | null };
 }
 
 const ShopContext = createContext<ShopState | null>(null);
@@ -51,6 +54,19 @@ function ShopProvider({ children }: { children: ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>([]);
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [ready, setReady] = useState(false);
+  const [stock, setStock] = useState<Record<string, { soldOut: boolean; low: number | null }>>({});
+
+  // Stock changes while people browse, so ask the shop rather than trusting the static catalogue.
+  useEffect(() => {
+    if (!apiEnabled) return;
+    const ctrl = new AbortController();
+    api<{ slug: string; inStock: boolean; lowStock: number | null }[]>('/products', { signal: ctrl.signal })
+      .then((list) => setStock(Object.fromEntries(list.map((p) => [p.slug, { soldOut: !p.inStock, low: p.lowStock }]))))
+      .catch(() => undefined);
+    return () => ctrl.abort();
+  }, []);
+
+  const stockOf = useCallback((slug: string) => stock[slug] ?? { soldOut: false, low: null }, [stock]);
 
   useEffect(() => {
     setRegionState(read<Region>('sm.region', 'UK'));
@@ -114,8 +130,9 @@ function ShopProvider({ children }: { children: ReactNode }) {
       clear,
       wishlist,
       toggleWish,
+      stockOf,
     }),
-    [ready, region, setRegion, lines, add, setQty, clear, wishlist, toggleWish],
+    [ready, region, setRegion, lines, add, setQty, clear, wishlist, toggleWish, stockOf],
   );
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>;

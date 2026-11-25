@@ -14,6 +14,8 @@ import {
   type Region,
 } from '@septer-m/shared';
 import { getProduct } from '@/lib/products';
+import { api, apiEnabled, ApiError, orderErrorMessage, type PlacedOrder } from '@/lib/api';
+import { checkPostcode, type PostcodeCheck } from '@/lib/postcode';
 import { formatMoney } from '@/lib/money';
 import { newOrderNumber, saveLastOrder, type Order } from '@/lib/order';
 import { useAuth } from '@/components/auth-provider';
@@ -31,7 +33,7 @@ type Errors = Record<string, string>;
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { ready, lines, region, setRegion, currency, clear } = useShop();
+  const { ready, lines, region, setRegion, currency, clear, stockOf } = useShop();
   const [email, setEmail] = useState('');
   const [uk, setUk] = useState(emptyUk);
   const [gh, setGh] = useState(emptyGh);
@@ -41,11 +43,18 @@ export default function CheckoutPage() {
   const [momoPhone, setMomoPhone] = useState('');
   const [errors, setErrors] = useState<Errors>({});
   const [placing, setPlacing] = useState(false);
-  const { user, profile, configured } = useAuth();
+  const { user, profile, configured, session } = useAuth();
   const now = useNow();
   const [draftLoaded, setDraftLoaded] = useState(false);
   const prefilledEmail = useRef(false);
   const prefilledName = useRef(false);
+  const [promoInput, setPromoInput] = useState('');
+  const [promo, setPromo] = useState<{ code: string; discount: number; description?: string } | null>(null);
+  const [promoMsg, setPromoMsg] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
+  const [promoBusy, setPromoBusy] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [cancelled, setCancelled] = useState(false);
+  const [pcCheck, setPcCheck] = useState<PostcodeCheck>(null);
 
   // Bring back a half-finished form after a reload (this tab only; payment details are never saved).
   useEffect(() => {
@@ -62,6 +71,10 @@ export default function CheckoutPage() {
       /* ignore a corrupt draft */
     }
     setDraftLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    setCancelled(new URLSearchParams(window.location.search).get('payment') === 'cancelled');
   }, []);
 
   useEffect(() => {
@@ -100,9 +113,55 @@ export default function CheckoutPage() {
   const options = shippingOptions(region, gh.region);
   const shipping = options.find((o) => o.id === shippingId) ?? options[0];
   const delivery = shippingCost(shipping, subtotal);
-  const total = subtotal + delivery;
+  const discount = Math.min(promo?.discount ?? 0, subtotal);
+  const total = subtotal - discount + delivery;
+  const soldOutRows = rows.filter((r) => stockOf(r.product.slug).soldOut);
   const method = region === 'UK' ? 'card' : payMethod;
   const money = (n: number) => formatMoney(n, currency);
+
+  const bagKey = rows.map((r) => `${r.product.slug}:${r.qty}`).join(',');
+  const applyPromo = async (code: string, silent = false) => {
+    const trimmed = code.trim();
+    if (!trimmed) return;
+    setPromoBusy(true);
+    try {
+      const res = await api<{ valid: boolean; code?: string; discount: number; description?: string; reason?: string; min?: number }>('/promo/validate', {
+        body: { code: trimmed, email: email || undefined, region, items: rows.map((r) => ({ slug: r.product.slug, qty: r.qty })) },
+      });
+      if (res.valid) {
+        setPromo({ code: res.code ?? trimmed.toUpperCase(), discount: res.discount, description: res.description });
+        setPromoMsg({ kind: 'ok', text: `${res.code ?? trimmed.toUpperCase()} applied` });
+      } else {
+        setPromo(null);
+        setPromoMsg({ kind: 'error', text: promoReason(res.reason, res.min, currency) });
+      }
+    } catch (e) {
+      if (!silent) setPromoMsg({ kind: 'error', text: orderErrorMessage(e) });
+    } finally {
+      setPromoBusy(false);
+    }
+  };
+
+  // A code's value depends on the bag, the country and (for first-order codes) the email, so re-check when they change.
+  const promoCode = promo?.code;
+  useEffect(() => {
+    if (!promoCode) return;
+    const t = setTimeout(() => void applyPromo(promoCode, true), 600);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bagKey, region, email, promoCode]);
+
+  const ukPostcode = uk.postcode;
+  useEffect(() => {
+    setPcCheck(null);
+    if (region !== 'UK') return;
+    const ctrl = new AbortController();
+    const t = setTimeout(() => void checkPostcode(ukPostcode, ctrl.signal).then(setPcCheck), 500);
+    return () => {
+      clearTimeout(t);
+      ctrl.abort();
+    };
+  }, [ukPostcode, region]);
 
   if (placing) return <p className="py-24 text-center text-muted">Placing your order…</p>;
   if (!ready) return <p className="py-24 text-center text-muted">Loading your bag…</p>;
@@ -157,6 +216,21 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (soldOutRows.length > 0) {
+      setSubmitError(`${soldOutRows[0].product.name} is sold out. Please remove it from your bag to continue.`);
+      return;
+    }
+    if (apiEnabled && promoInput.trim() && !promo) {
+      setPromoMsg({ kind: 'error', text: 'Press Apply to use this code, or clear the box.' });
+      document.getElementById('promo')?.focus();
+      return;
+    }
+
+    if (apiEnabled) {
+      void placeWithApi(result.data);
+      return;
+    }
+
     const order: Order = {
       number: newOrderNumber(),
       createdAt: new Date().toISOString(),
@@ -181,6 +255,38 @@ export default function CheckoutPage() {
     router.push('/checkout/confirmation');
   };
 
+  /** Sends the order to the shop, then to wherever the shopper pays (hosted card page, or a prompt on their phone). */
+  const placeWithApi = async (data: ReturnType<typeof checkoutSchema.parse>) => {
+    setPlacing(true);
+    setSubmitError(null);
+    try {
+      const placed = await api<PlacedOrder>('/orders', {
+        body: { items: rows.map((r) => ({ slug: r.product.slug, qty: r.qty })), checkout: data, promoCode: promo?.code },
+        token: session?.access_token,
+      });
+      try {
+        sessionStorage.setItem('sm.pay', JSON.stringify({ number: placed.number, payment: placed.payment }));
+        sessionStorage.removeItem('sm.checkoutDraft');
+      } catch {
+        /* the confirmation page can still read the order from the server */
+      }
+      // The bag is emptied on the confirmation page once the order is paid, so coming back from a cancelled card payment keeps it.
+      if (placed.payment.action === 'redirect') {
+        window.location.assign(placed.payment.url);
+        return;
+      }
+      router.push(`/checkout/confirmation?order=${encodeURIComponent(placed.number)}&token=${encodeURIComponent(placed.token)}`);
+    } catch (e) {
+      setPlacing(false);
+      setSubmitError(orderErrorMessage(e));
+      if (e instanceof ApiError && e.code === 'PROMO_INVALID') {
+        setPromo(null);
+        setPromoMsg({ kind: 'error', text: e.message });
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   const summaryBody = (
     <>
       <ul className="space-y-4">
@@ -197,6 +303,7 @@ export default function CheckoutPage() {
       </ul>
       <dl className="space-y-2 border-t border-line pt-4 text-sm">
         <div className="flex justify-between"><dt>Subtotal</dt><dd>{money(subtotal)}</dd></div>
+        {discount > 0 && <div className="flex justify-between text-green-700"><dt>Discount ({promo?.code})</dt><dd>−{money(discount)}</dd></div>}
         <div className="flex justify-between">
           <dt>Delivery</dt>
           <dd>{region === 'GH' && !gh.region ? 'Choose your region' : delivery === 0 ? 'Free' : money(delivery)}</dd>
@@ -217,6 +324,22 @@ export default function CheckoutPage() {
             Have an account? <Link href="/account?next=/checkout" className="underline">Sign in</Link> to fill in your details, or continue as a guest.
           </p>
         )
+      )}
+
+      {cancelled && (
+        <p role="status" className="mt-4 rounded-xl border border-line bg-mist px-4 py-3 text-sm">
+          Your payment wasn’t completed and you haven’t been charged. Your bag is still here whenever you’re ready.
+        </p>
+      )}
+      {submitError && (
+        <p role="alert" className="mt-4 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {submitError} <Link href="/cart" className="underline">Review bag</Link>
+        </p>
+      )}
+      {soldOutRows.length > 0 && !submitError && (
+        <p role="alert" className="mt-4 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {soldOutRows[0].product.name} is sold out. <Link href="/cart" className="underline">Remove it from your bag</Link> to continue.
+        </p>
       )}
 
       {/* Phones: the order and its total sit at the top, collapsed by default. */}
@@ -267,7 +390,13 @@ export default function CheckoutPage() {
                   <div className="sm:col-span-2"><TextField label="Address line 1" autoComplete="address-line1" {...ukField('line1')} /></div>
                   <div className="sm:col-span-2"><TextField label="Address line 2" optional autoComplete="address-line2" {...ukField('line2')} /></div>
                   <TextField label="Town or city" autoComplete="address-level2" {...ukField('city')} />
-                  <TextField label="Postcode" autoComplete="postal-code" className="uppercase" {...ukField('postcode')} />
+                  <TextField
+                    label="Postcode"
+                    autoComplete="postal-code"
+                    className="uppercase"
+                    hint={pcCheck?.found ? `✓ ${pcCheck.area}` : pcCheck && !pcCheck.found ? 'We couldn’t find this postcode. Please double-check it.' : undefined}
+                    {...ukField('postcode')}
+                  />
                   <div className="sm:col-span-2">
                     <TextField label="Phone" optional type="tel" autoComplete="tel" hint="For delivery updates." {...ukField('phone')} />
                   </div>
@@ -350,6 +479,47 @@ export default function CheckoutPage() {
             )}
           </Section>
 
+          {apiEnabled && (
+            <div className="rounded-2xl border border-line p-5">
+              <label htmlFor="promo" className="text-sm font-medium">Discount code</label>
+              <div className="mt-2 flex gap-2">
+                <input
+                  id="promo"
+                  value={promoInput}
+                  onChange={(e) => {
+                    setPromoInput(e.target.value);
+                    if (promo) setPromo(null);
+                    setPromoMsg(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      void applyPromo(promoInput);
+                    }
+                  }}
+                  autoComplete="off"
+                  autoCapitalize="characters"
+                  spellCheck={false}
+                  className="h-11 min-w-0 flex-1 rounded-xl border border-line bg-card px-3 uppercase"
+                  placeholder="Enter code"
+                />
+                <button
+                  type="button"
+                  disabled={promoBusy || !promoInput.trim()}
+                  onClick={() => void applyPromo(promoInput)}
+                  className="h-11 rounded-xl bg-ink px-5 text-sm font-medium text-white transition hover:bg-brand hover:text-ink disabled:opacity-50"
+                >
+                  {promoBusy ? 'Checking…' : 'Apply'}
+                </button>
+              </div>
+              {promoMsg && (
+                <p role={promoMsg.kind === 'error' ? 'alert' : 'status'} className={`mt-2 text-sm ${promoMsg.kind === 'ok' ? 'text-green-700' : 'text-red-700'}`}>
+                  {promoMsg.text}
+                </p>
+              )}
+            </div>
+          )}
+
           <p className="text-xs text-muted">
             By placing your order you agree to our <Link href="/terms" className="underline">Terms &amp; conditions</Link> and <Link href="/privacy" className="underline">Privacy policy</Link>, and
             to our {RETURN_DAYS}-day <Link href="/returns" className="underline">returns policy</Link>.
@@ -379,4 +549,18 @@ export default function CheckoutPage() {
       </div>
     </div>
   );
+}
+
+function promoReason(reason: string | undefined, min: number | undefined, currency: 'GBP' | 'GHS'): string {
+  switch (reason) {
+    case 'EXPIRED': return 'This code has expired.';
+    case 'NOT_STARTED': return 'This code isn’t active yet.';
+    case 'USED_UP': return 'This code has been fully used.';
+    case 'INACTIVE': return 'This code isn’t active.';
+    case 'FIRST_ORDER_ONLY': return 'This code is for first orders only.';
+    case 'ALREADY_USED': return 'You’ve already used this code.';
+    case 'EMAIL_REQUIRED': return 'Enter your email above first, then apply this code.';
+    case 'MIN_SUBTOTAL': return min ? `Spend ${formatMoney(min, currency)} or more to use this code.` : 'Your bag doesn’t reach the minimum spend for this code.';
+    default: return 'That code isn’t valid.';
+  }
 }
