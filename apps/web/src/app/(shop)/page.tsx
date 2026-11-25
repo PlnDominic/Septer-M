@@ -48,8 +48,6 @@ export default function Home() {
         </div>
       </section>
 
-      <div className="mt-6"><TrustStrip /></div>
-
       {/* Categories */}
       <section className="pt-14">
         <SectionHead title="Shop by category" href="/shop" />
