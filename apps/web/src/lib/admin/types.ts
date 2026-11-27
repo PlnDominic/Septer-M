@@ -21,6 +21,8 @@ export const REVENUE_STATUSES: OrderStatus[] = ['paid', 'processing', 'shipped',
 export const TO_FULFIL: OrderStatus[] = ['paid', 'processing'];
 
 export interface AdminOrder extends Order {
+  discount?: number;
+  discountCode?: string;
   status: OrderStatus;
   history: { status: OrderStatus; at: string; note?: string }[];
 }

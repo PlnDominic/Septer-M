@@ -27,6 +27,8 @@ function Field({ id, label, hint, error, children }: { id: string; label: string
 
 export function ProductForm({ product }: { product?: AdminProduct }) {
   const router = useRouter();
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const { products, saveProduct, deleteProduct } = useAdmin();
   const editing = !!product;
 
@@ -51,7 +53,7 @@ export function ProductForm({ product }: { product?: AdminProduct }) {
 
   const slug = product?.slug ?? slugify(name);
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     const err: Record<string, string> = {};
     if (!name.trim()) err.name = 'Enter a product name';
@@ -69,7 +71,8 @@ export function ProductForm({ product }: { product?: AdminProduct }) {
       return;
     }
     const compareAt = wasGbp && wasGhs ? { GBP: toMinor(wasGbp), GHS: toMinor(wasGhs) } : undefined;
-    saveProduct(
+    setSaving(true);
+    const failed = await saveProduct(
       {
         slug,
         name: name.trim(),
@@ -91,6 +94,8 @@ export function ProductForm({ product }: { product?: AdminProduct }) {
       },
       product?.slug,
     );
+    setSaving(false);
+    if (failed) return setSaveError(failed);
     router.push('/admin/products');
   };
 
@@ -159,8 +164,9 @@ export function ProductForm({ product }: { product?: AdminProduct }) {
           </div>
         </Card>
 
+        {saveError && <p role="alert" className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">{saveError}</p>}
         <div className="flex flex-wrap gap-3">
-          <button type="submit" className={`${btnPrimary} flex-1`}>{editing ? 'Save changes' : 'Create product'}</button>
+          <button type="submit" disabled={saving} className={`${btnPrimary} flex-1`}>{saving ? 'Saving…' : editing ? 'Save changes' : 'Create product'}</button>
           <Link href="/admin/products" className={btnGhost}>Cancel</Link>
         </div>
         {editing && (
@@ -169,8 +175,7 @@ export function ProductForm({ product }: { product?: AdminProduct }) {
             className="text-sm text-red-700 underline"
             onClick={() => {
               if (confirm(`Delete “${product.name}”? Past orders keep their own copy of the item.`)) {
-                deleteProduct(product.slug);
-                router.push('/admin/products');
+                void deleteProduct(product.slug).then((failed) => (failed ? setSaveError(failed) : router.push('/admin/products')));
               }
             }}
           >

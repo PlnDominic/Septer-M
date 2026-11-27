@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { formatMoney } from '@/lib/money';
@@ -8,6 +8,35 @@ import { CATEGORIES } from '@/lib/products';
 import { useAdmin } from '@/lib/admin/store';
 import { LOW_STOCK } from '@/lib/admin/types';
 import { Card, PageHeader, btnPrimary, inputClass, td, th } from '@/components/admin/ui';
+
+/** Saves when you leave the box or press Enter, not on every keystroke (each save is a request to the shop). */
+function StockInput({ id, value, low, onCommit }: { id: string; value: number; low: boolean; onCommit: (n: number) => Promise<string | null> }) {
+  const [text, setText] = useState(String(value));
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => setText(String(value)), [value]);
+  const commit = async () => {
+    const n = Math.max(0, parseInt(text || '0', 10) || 0);
+    if (n === value) return setText(String(value));
+    const failed = await onCommit(n);
+    setError(failed);
+    if (failed) setText(String(value));
+  };
+  return (
+    <>
+      <input
+        id={id}
+        type="number"
+        min="0"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={() => void commit()}
+        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+        className={`h-9 w-20 rounded-lg border bg-white px-2 text-sm outline-none focus:border-ink ${low ? 'border-amber-500' : 'border-line'}`}
+      />
+      {error && <span role="alert" className="ml-2 text-xs text-red-700">{error}</span>}
+    </>
+  );
+}
 
 export default function ProductsPage() {
   const { products, saveProduct } = useAdmin();
@@ -39,14 +68,7 @@ export default function ProductsPage() {
                   </td>
                   <td className={td}>
                     <label className="sr-only" htmlFor={`stock-${p.slug}`}>Stock for {p.name}</label>
-                    <input
-                      id={`stock-${p.slug}`}
-                      type="number"
-                      min="0"
-                      value={p.stock}
-                      onChange={(e) => saveProduct({ ...p, stock: Math.max(0, parseInt(e.target.value || '0', 10)) }, p.slug)}
-                      className={`h-9 w-20 rounded-lg border bg-white px-2 text-sm outline-none focus:border-ink ${p.stock <= LOW_STOCK ? 'border-amber-500' : 'border-line'}`}
-                    />
+                    <StockInput id={`stock-${p.slug}`} value={p.stock} low={p.stock <= LOW_STOCK} onCommit={(n) => saveProduct({ ...p, stock: n }, p.slug)} />
                     {p.stock === 0 ? <span className="ml-2 text-xs font-medium text-red-700">Out of stock</span> : p.stock <= LOW_STOCK && <span className="ml-2 text-xs font-medium text-amber-800">Low</span>}
                   </td>
                   <td className={`${td} whitespace-nowrap text-right`}>{formatMoney(p.price.GBP, 'GBP')}<div className="text-xs text-muted">{formatMoney(p.price.GHS, 'GHS')}</div></td>

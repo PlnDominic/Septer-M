@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { AppModule } from './app.module';
+import { configureApp } from './bootstrap';
 import { HttpService } from './common/http.service';
 import { resetEnvCache } from './config/env';
 import { fakeHttp, type Handler } from './fake-http.testing';
@@ -75,7 +76,7 @@ describe('Commerce API (HTTP)', () => {
       .overrideProvider(HttpService).useValue(http.service)
       .compile();
     app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter(), { rawBody: true });
-    app.setGlobalPrefix('v1');
+    configureApp(app);
     await app.init();
     await app.getHttpAdapter().getInstance().ready();
   }
@@ -567,6 +568,16 @@ describe('Commerce API (HTTP)', () => {
       await flush();
       expect(http.to('api.resend.com')).toHaveLength(0);
     });
+  });
+
+  it('browser preflight allows the verbs the admin uses (PUT, DELETE) with an auth header', async () => {
+    await boot();
+    for (const method of ['PUT', 'DELETE', 'POST']) {
+      const res = await app.inject({ method: 'OPTIONS', url: '/v1/admin/products/x', headers: { origin: 'http://localhost:3000', 'access-control-request-method': method, 'access-control-request-headers': 'authorization,content-type' } });
+      expect(res.statusCode).toBe(204);
+      expect(res.headers['access-control-allow-methods']).toContain(method);
+      expect(String(res.headers['access-control-allow-headers']).toLowerCase()).toContain('authorization');
+    }
   });
 
   /* ------------------------------------------------------------------ catalogue */

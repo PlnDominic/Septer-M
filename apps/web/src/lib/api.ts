@@ -15,7 +15,7 @@ export class ApiError extends Error {
   }
 }
 
-export async function api<T>(path: string, init: { method?: 'GET' | 'POST'; body?: unknown; token?: string | null; signal?: AbortSignal } = {}): Promise<T> {
+export async function api<T>(path: string, init: { method?: 'GET' | 'POST' | 'PUT' | 'DELETE'; body?: unknown; token?: string | null; signal?: AbortSignal } = {}): Promise<T> {
   if (!apiEnabled) throw new ApiError(0, 'API_NOT_CONFIGURED', 'The shop is not connected yet.');
   let res: Response;
   try {

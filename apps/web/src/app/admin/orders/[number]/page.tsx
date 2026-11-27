@@ -32,6 +32,8 @@ export default function OrderDetail() {
   const { number } = useParams<{ number: string }>();
   const { orders, setOrderStatus } = useAdmin();
   const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const order = orders.find((o) => o.number === number);
 
   if (!order) {
@@ -45,9 +47,12 @@ export default function OrderDetail() {
 
   const money = (n: number) => formatMoney(n, order.currency);
   const next = NEXT[order.status];
-  const apply = (to: OrderStatus, defaultNote?: string) => {
-    setOrderStatus(order.number, to, note.trim() || defaultNote);
-    setNote('');
+  const apply = async (to: OrderStatus, defaultNote?: string) => {
+    setBusy(true);
+    const failed = await setOrderStatus(order.number, to, note.trim() || defaultNote);
+    setBusy(false);
+    setActionError(failed);
+    if (!failed) setNote('');
   };
   const p = order.payment;
   const network = p.method === 'momo' ? MOMO_NETWORKS.find((n) => n.id === p.network)?.label : undefined;
@@ -74,6 +79,7 @@ export default function OrderDetail() {
             </ul>
             <dl className="space-y-1 border-t border-line px-5 py-4 text-sm">
               <div className="flex justify-between"><dt>Subtotal</dt><dd>{money(order.subtotal)}</dd></div>
+              {!!order.discount && <div className="flex justify-between text-green-700"><dt>Discount{order.discountCode ? ` (${order.discountCode})` : ''}</dt><dd>−{money(order.discount)}</dd></div>}
               <div className="flex justify-between"><dt>{order.shipping.label}</dt><dd>{order.shipping.cost === 0 ? 'Free' : money(order.shipping.cost)}</dd></div>
               <div className="flex justify-between pt-2 text-base font-semibold"><dt>Total</dt><dd>{money(order.total)}</dd></div>
             </dl>
@@ -104,13 +110,14 @@ export default function OrderDetail() {
                     Note {order.status === 'processing' && '(e.g. tracking number)'}
                   </label>
                   <input id="note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional" className={inputClass} />
-                  {next && <button type="button" className={`${btnPrimary} w-full`} onClick={() => apply(next.to, next.note)}>{next.label}</button>}
+                  {actionError && <p role="alert" className="text-sm text-red-700">{actionError}</p>}
+                  {next && <button type="button" disabled={busy} className={`${btnPrimary} w-full`} onClick={() => apply(next.to, next.note)}>{next.label}</button>}
                   <div className="flex gap-2">
                     {CAN_CANCEL.includes(order.status) && (
-                      <button type="button" className={`${btnGhost} flex-1`} onClick={() => confirm('Cancel this order?') && apply('cancelled')}>Cancel</button>
+                      <button type="button" disabled={busy} className={`${btnGhost} flex-1`} onClick={() => confirm('Cancel this order?') && apply('cancelled')}>Cancel</button>
                     )}
                     {CAN_REFUND.includes(order.status) && (
-                      <button type="button" className={`${btnGhost} flex-1`} onClick={() => confirm(`Mark ${money(order.total)} as refunded? This does not move any money yet.`) && apply('refunded')}>Refund</button>
+                      <button type="button" disabled={busy} className={`${btnGhost} flex-1`} onClick={() => confirm(`Mark ${money(order.total)} as refunded? This does not move any money yet.`) && apply('refunded')}>Refund</button>
                     )}
                   </div>
                 </>

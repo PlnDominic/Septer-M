@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/components/auth-provider';
 import { useAdmin } from '@/lib/admin/store';
 import { TO_FULFIL } from '@/lib/admin/types';
 import { CloseIcon, MenuIcon } from '@/components/icons';
@@ -13,12 +14,15 @@ const NAV = [
   { href: '/admin/orders', label: 'Orders' },
   { href: '/admin/products', label: 'Products' },
   { href: '/admin/customers', label: 'Customers' },
+  { href: '/admin/promos', label: 'Promo codes' },
+  { href: '/admin/reviews', label: 'Reviews' },
   { href: '/admin/settings', label: 'Settings' },
 ];
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { orders, ready, reset } = useAdmin();
+  const { orders, ready, reset, live, loadError, reload } = useAdmin();
+  const { user, signOut } = useAuth();
   const [open, setOpen] = useState(false);
   const toFulfil = orders.filter((o) => TO_FULFIL.includes(o.status)).length;
 
@@ -60,15 +64,22 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const footer = (
     <div className="mt-auto space-y-3 border-t border-white/10 pt-4 text-xs text-white/60">
       <Link href="/" className="block hover:text-white">← View store</Link>
-      <button
-        type="button"
-        onClick={() => {
-          if (confirm('Reset all demo orders and products? Your changes in the admin will be lost.')) reset();
-        }}
-        className="hover:text-white"
-      >
-        Reset demo data
-      </button>
+      {live ? (
+        <div className="space-y-1">
+          <p className="truncate">{user?.email}</p>
+          <button type="button" onClick={() => void signOut()} className="hover:text-white">Sign out</button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            if (confirm('Reset all demo orders and products? Your changes in the admin will be lost.')) reset();
+          }}
+          className="hover:text-white"
+        >
+          Reset demo data
+        </button>
+      )}
     </div>
   );
 
@@ -89,9 +100,18 @@ export function AdminShell({ children }: { children: ReactNode }) {
         </div>
         {open && <div className="flex flex-col gap-4 bg-ink px-4 pb-4 lg:hidden">{nav}{footer}</div>}
 
-        <div role="note" className="border-b border-brand/40 bg-brand/10 px-4 py-2 text-xs sm:px-8">
-          <strong>Demo data.</strong> The admin isn&apos;t connected to a database or sign-in yet. Changes are saved in this browser only.
-        </div>
+        {live ? (
+          loadError && (
+            <div role="alert" className="flex items-center justify-between gap-3 border-b border-red-300 bg-red-50 px-4 py-2 text-xs text-red-800 sm:px-8">
+              <span>Couldn’t load the shop data: {loadError}</span>
+              <button type="button" onClick={reload} className="font-medium underline">Try again</button>
+            </div>
+          )
+        ) : (
+          <div role="note" className="border-b border-brand/40 bg-brand/10 px-4 py-2 text-xs sm:px-8">
+            <strong>Demo data.</strong> The admin isn&apos;t connected to a database or sign-in yet. Changes are saved in this browser only.
+          </div>
+        )}
         <main className="flex-1 px-4 py-6 sm:px-8 sm:py-8">{ready ? children : <p className="text-sm text-muted">Loading…</p>}</main>
       </div>
     </div>
