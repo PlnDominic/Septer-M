@@ -54,11 +54,17 @@ After editing a migration, run `pnpm db:bundle` to regenerate `setup.sql` and `p
 
 | Route | Who |
 |---|---|
-| `GET /v1/products`, `GET /v1/products/:slug` | Public |
-| `POST /v1/orders` | Guests and signed-in customers |
-| `GET /v1/orders/:number?token=` | Guest, with the token returned at checkout |
+| `GET /v1/products`, `GET /v1/products/:slug` | Public (includes `inStock` and `lowStock`, never the stock count) |
+| `POST /v1/orders` | Guests and signed-in customers. Prices, discount and stock are decided on the server; returns what to do next to pay |
+| `POST /v1/promo/validate` | Public, rate limited |
+| `GET /v1/orders/:number?token=` | Guest, with the secret token from checkout or an email link |
+| `POST /v1/orders/:number/payment`, `.../payment/otp` | Retry paying, or enter a Mobile Money one-time code (needs the token) |
+| `POST /v1/orders/track` | Order number + email, rate limited |
+| `POST /v1/subscribe`, `GET /v1/unsubscribe?token=` | Newsletter; a new subscriber is emailed a one-off 10% code |
+| `GET/POST /v1/products/:slug/reviews`, `GET .../eligibility` | List is public; writing needs sign-in and a shipped order of that product |
 | `GET /v1/me`, `GET /v1/me/orders` | Signed in |
-| `/v1/admin/*` (dashboard, orders, products, customers) | Admins only |
+| `POST /v1/webhooks/stripe`, `POST /v1/webhooks/paystack` | The payment providers, verified by signature on the raw body |
+| `/v1/admin/*` (dashboard, orders, products, customers, promo codes, reviews) | Admins only |
 | `GET /v1/internal/release-expired` | Scheduler, with `Authorization: Bearer $CRON_SECRET` |
 
 Run the API locally with `pnpm dev:api`. `pnpm test` runs the API tests; `pnpm test:db` runs the database tests.
@@ -89,7 +95,24 @@ https://YOUR-DOMAIN/account/reset
 
 Until Google is enabled in Supabase the button shows "Google sign-in isn't switched on for this store yet" instead of failing. Google accounts get a profile automatically (name included), exactly like email sign-ups. While the Google consent screen is in "Testing" mode only the test users you list can sign in; publish it to open it to everyone.
 
-Without the two variables the page shows a clear "sign-in isn't switched on yet" notice instead of a form. Customers can see only their own orders (Row Level Security), and an account becomes an admin only when you set `role = 'admin'` on its `profiles` row. The admin pages are not yet locked behind sign-in.
+Without the two variables the page shows a clear "sign-in isn't switched on yet" notice instead of a form. Customers can see only their own orders (Row Level Security), and an account becomes an admin only when you set `role = 'admin'` on its `profiles` row.
+
+**Admin lock.** When `NEXT_PUBLIC_API_URL` is set, `/admin` shows only to signed-in admins (everyone else sees a sign-in prompt or "no access" and no data is requested). That screen is a courtesy: the real lock is the API, which refuses every `/v1/admin/*` request that is not from an admin. Without `NEXT_PUBLIC_API_URL` the admin is a browser-only demo with fake data.
+
+**Payments.** Set the keys from `.env.example` on the **API** project, and `WEB_URL` to the storefront address.
+
+| | UK | Ghana |
+|---|---|---|
+| Provider | Stripe Checkout (cards, Apple Pay, Google Pay) | Paystack (cards via hosted page; Mobile Money charge to the customer's phone) |
+| Webhook to add in the dashboard | `https://YOUR-API/v1/webhooks/stripe` | `https://YOUR-API/v1/webhooks/paystack` |
+
+The order is only marked Paid by a verified webhook, never by the browser coming back from the payment page. Payments are idempotent (a repeated webhook does nothing), the amount and currency must match the order, and a payment that arrives after an order expired is flagged for review instead of being lost.
+
+**Email.** Order confirmation, shipping and welcome-code emails go through [Resend](https://resend.com) (`RESEND_API_KEY`, `EMAIL_FROM` on a domain you verified). With no key the shop works and simply sends nothing. A failing email never blocks an order or payment.
+
+**Promo codes and reviews.** Create and switch off codes in **Admin > Promo codes**; approve reviews in **Admin > Reviews**. The discount is calculated and re-checked inside the same database transaction that reserves stock, so it cannot be edited in the browser or used twice.
+
+**Updating an existing database.** If you ran an older `setup.sql`, apply the newer files in `supabase/migrations/` (the latest is `20261130100000_commerce_extras.sql`) in the SQL Editor instead of starting over.
 
 ## Before launch
 
@@ -105,16 +128,20 @@ The Delivery, Returns, Privacy and Terms pages are good-faith drafts written fro
 
 Set `NEXT_PUBLIC_SITE_URL` to your real address so the sitemap, share previews (WhatsApp, Instagram) and Google product data point at the right place. Search engines are told to skip `/admin`, `/checkout`, `/account`, `/cart` and `/wishlist`.
 
-Ratings are hidden until real reviews exist (`rating.count` is 0 for every product). Do not add placeholder ratings or reviews: fake reviews are illegal in the UK.
+Ratings are hidden until real reviews exist. Reviews can only be written by customers whose order of that product shipped, and show only after you approve them. Do not add placeholder ratings or reviews: fake reviews are illegal in the UK.
 
 ## Deploying to Vercel
 
-One Vercel project, rooted at `apps/web` (Framework: Next.js).
-Enable "Include source files outside of the Root Directory" because the app depends on `packages/shared`.
-Set the env vars from `.env.example`.
+Two Vercel projects from this one repo, both with **Include source files outside of the Root Directory** enabled (they depend on `packages/shared`):
 
-The NestJS API (`apps/api`) is not deployed yet. When the backend phase starts it will be served from this same project.
-Use the Supabase **pooled** connection string for `DATABASE_URL`.
+| Project | Root directory | Notes |
+|---|---|---|
+| Storefront + admin | `apps/web` (Next.js) | Set the `NEXT_PUBLIC_*` variables. `NEXT_PUBLIC_API_URL` is the API project's address. |
+| API | `apps/api` | `apps/api/vercel.json` routes every request to the NestJS function and registers a cron for `/v1/internal/release-expired`. Set `SUPABASE_*`, `WEB_URL`, `WEB_ORIGIN` (the storefront address, for CORS), `CRON_SECRET`, the Stripe/Paystack keys and the Resend settings. |
+
+The API is a separate project because a Next.js project cannot also run the NestJS app. (Serving it from the storefront's own project would be possible with a route-handler bridge; that is not built.) `NEXT_PUBLIC_*` values are baked in at build time, so redeploy the storefront after changing them.
+
+The in-memory rate limiter is per serverless instance, so it is best-effort protection against abuse, not a hard guarantee.
 
 ## Conventions
 
